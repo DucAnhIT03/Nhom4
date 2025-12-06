@@ -1,0 +1,288 @@
+.artist-management-page {
+  width: 100%;
+  color: #ffffff;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #ffffff;
+}
+
+.page-subtitle {
+  font-size: 16px;
+  color: #a0aec0;
+  margin: 0;
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #3BC8E7;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: #2ba8c7;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 200, 231, 0.3);
+}
+
+.page-toolbar {
+  margin-bottom: 24px;
+}
+
+.search-box {
+  position: relative;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #718096;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #3BC8E7;
+  box-shadow: 0 0 0 3px rgba(59, 200, 231, 0.1);
+}
+
+.search-input::placeholder {
+  color: #718096;
+}
+
+.table-container {
+  background: #1a1a1a;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: #a0aec0;
+}
+
+.artists-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.artists-table thead {
+  background: rgba(59, 200, 231, 0.1);
+}
+
+.artists-table th {
+  padding: 16px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3BC8E7;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  vertical-align: middle;
+}
+
+.artists-table th:nth-child(1),
+.artists-table td:nth-child(1) {
+  width: 60px;
+  min-width: 60px;
+  text-align: center;
+}
+
+.artists-table th:nth-child(2),
+.artists-table td:nth-child(2) {
+  width: 200px;
+  min-width: 200px;
+}
+
+.artists-table th:nth-child(3),
+.artists-table td:nth-child(3) {
+  width: 120px;
+  min-width: 120px;
+}
+
+.artists-table th:nth-child(4),
+.artists-table td:nth-child(4) {
+  width: 80px;
+  min-width: 80px;
+  text-align: center;
+}
+
+.artists-table th:nth-child(5),
+.artists-table td:nth-child(5) {
+  width: 250px;
+  min-width: 250px;
+}
+
+.artists-table th:nth-child(6),
+.artists-table td:nth-child(6) {
+  width: 130px;
+  min-width: 130px;
+}
+
+.artists-table th:nth-child(7),
+.artists-table td:nth-child(7) {
+  width: 140px;
+  min-width: 140px;
+  text-align: center;
+}
+
+.artists-table td {
+  padding: 16px;
+  font-size: 14px;
+  color: #e2e8f0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  text-align: left;
+}
+
+.artists-table tbody tr:hover {
+  background: rgba(59, 200, 231, 0.05);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px !important;
+  color: #718096;
+}
+
+.artist-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.artist-avatar-small {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.bio-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.text-muted {
+  color: #718096;
+}
+
+.avatar-link {
+  color: #3BC8E7;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.avatar-link:hover {
+  color: #2ba8c7;
+  text-decoration: underline;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-edit {
+  background: rgba(59, 200, 231, 0.2);
+  color: #3BC8E7;
+}
+
+.btn-edit:hover {
+  background: rgba(59, 200, 231, 0.3);
+}
+
+.btn-delete {
+  background: rgba(229, 62, 62, 0.2);
+  color: #e53e3e;
+}
+
+.btn-delete:hover {
+  background: rgba(229, 62, 62, 0.3);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #3BC8E7;
+  border-color: #3BC8E7;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  color: #a0aec0;
+  font-size: 14px;
+}
+
