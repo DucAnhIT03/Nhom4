@@ -40,6 +40,9 @@ export class Album {
   @Column({ name: "cover_image", length: 255, nullable: true })
   coverImage?: string;
 
+  @Column({ name: "background_music", length: 255, nullable: true })
+  backgroundMusic?: string;
+
   @Column({ type: "enum", enum: AlbumType, nullable: false })
   type!: AlbumType;
 

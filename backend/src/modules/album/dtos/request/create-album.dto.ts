@@ -24,6 +24,11 @@ export class CreateAlbumDto {
   @Length(1, 255)
   coverImage?: string;
 
+  @IsOptional()
+  @IsString()
+  @Length(1, 255)
+  backgroundMusic?: string;
+
   @IsEnum(AlbumType)
   type!: AlbumType;
 }

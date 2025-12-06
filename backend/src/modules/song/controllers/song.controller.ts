@@ -68,6 +68,12 @@ export class SongController {
   remove(@Param("id", ParseIntPipe) id: number) {
     return this.songService.remove(id);
   }
+
+  @ApiOperation({ summary: "Tăng lượt nghe của bài hát" })
+  @Post(":id/increment-views")
+  incrementViews(@Param("id", ParseIntPipe) id: number) {
+    return this.songService.incrementViews(id);
+  }
 }
 
 

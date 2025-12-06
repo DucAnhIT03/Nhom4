@@ -6,6 +6,7 @@ export interface Album {
   title: string;
   releaseDate?: string;
   coverImage?: string;
+  backgroundMusic?: string;
   artistId?: number;
   genreId?: number;
   type: 'FREE' | 'PREMIUM';
@@ -27,6 +28,7 @@ export interface CreateAlbumDto {
   artistId?: number;
   genreId?: number;
   coverImage?: string;
+  backgroundMusic?: string;
   type: 'FREE' | 'PREMIUM';
 }
 
@@ -36,6 +38,7 @@ export interface UpdateAlbumDto {
   artistId?: number;
   genreId?: number;
   coverImage?: string;
+  backgroundMusic?: string;
   type?: 'FREE' | 'PREMIUM';
 }
 

@@ -312,3 +312,86 @@ select.form-input option {
   font-weight: 500;
 }
 
+/* Audio Upload Styles */
+.audio-upload-container {
+  position: relative;
+}
+
+.audio-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #a0aec0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 120px;
+}
+
+.audio-upload-label:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #3BC8E7;
+  color: #3BC8E7;
+}
+
+.audio-upload-label span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.audio-preview-container {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.audio-preview {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview-audio {
+  width: 100%;
+  max-width: 400px;
+  height: 40px;
+  outline: none;
+}
+
+.preview-audio::-webkit-media-controls-panel {
+  background-color: rgba(26, 26, 26, 0.9);
+}
+
+.preview-audio::-webkit-media-controls-play-button {
+  background-color: #3BC8E7;
+  border-radius: 50%;
+}
+
+.btn-remove-audio {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(229, 62, 62, 0.9);
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.btn-remove-audio:hover {
+  background: rgba(229, 62, 62, 1);
+  transform: scale(1.1);
+}
+

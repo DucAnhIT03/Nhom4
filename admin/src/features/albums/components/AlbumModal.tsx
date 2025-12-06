@@ -23,15 +23,19 @@ const AlbumModal = ({ album, onClose, onSuccess }: AlbumModalProps) => {
     genreId: '',
     releaseDate: '',
     coverImage: '',
+    backgroundMusic: '',
     type: 'FREE' as 'FREE' | 'PREMIUM',
   });
   const [artists, setArtists] = useState<Artist[]>([]);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingMusic, setUploadingMusic] = useState(false);
+  const [uploadProgressMusic, setUploadProgressMusic] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const musicInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -61,6 +65,7 @@ const AlbumModal = ({ album, onClose, onSuccess }: AlbumModalProps) => {
           ? new Date(album.releaseDate).toISOString().split('T')[0]
           : '',
         coverImage: album.coverImage || '',
+        backgroundMusic: album.backgroundMusic || '',
         type: album.type || 'FREE',
       });
     } else {
@@ -71,6 +76,7 @@ const AlbumModal = ({ album, onClose, onSuccess }: AlbumModalProps) => {
         genreId: '',
         releaseDate: '',
         coverImage: '',
+        backgroundMusic: '',
         type: 'FREE',
       });
     }
@@ -142,6 +148,52 @@ const AlbumModal = ({ album, onClose, onSuccess }: AlbumModalProps) => {
     }));
   };
 
+  const handleMusicFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('audio/')) {
+      setError('Vui lòng chọn file audio');
+      return;
+    }
+
+    // Validate file size (max 20MB)
+    if (file.size > 20 * 1024 * 1024) {
+      setError('Kích thước file không được vượt quá 20MB');
+      return;
+    }
+
+    setUploadingMusic(true);
+    setUploadProgressMusic(0);
+    setError('');
+
+    try {
+      const result = await uploadFile(file, (progress) => {
+        setUploadProgressMusic(progress);
+      });
+      setFormData((prev) => ({
+        ...prev,
+        backgroundMusic: result.url,
+      }));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Không thể upload file. Vui lòng thử lại.');
+    } finally {
+      setUploadingMusic(false);
+      setUploadProgressMusic(0);
+      if (musicInputRef.current) {
+        musicInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveMusic = () => {
+    setFormData((prev) => ({
+      ...prev,
+      backgroundMusic: '',
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -156,6 +208,7 @@ const AlbumModal = ({ album, onClose, onSuccess }: AlbumModalProps) => {
           genreId: formData.albumOwnerType === 'genre' && formData.genreId ? parseInt(formData.genreId) : undefined,
           releaseDate: formData.releaseDate || undefined,
           coverImage: formData.coverImage || undefined,
+          backgroundMusic: formData.backgroundMusic || undefined,
           type: formData.type || undefined,
         };
         await updateAlbum(album.id, updateData);
@@ -177,6 +230,7 @@ const AlbumModal = ({ album, onClose, onSuccess }: AlbumModalProps) => {
           genreId: formData.albumOwnerType === 'genre' && formData.genreId ? parseInt(formData.genreId) : undefined,
           releaseDate: formData.releaseDate || undefined,
           coverImage: formData.coverImage || undefined,
+          backgroundMusic: formData.backgroundMusic || undefined,
           type: formData.type,
         };
         await createAlbum(createData);
@@ -347,6 +401,55 @@ const AlbumModal = ({ album, onClose, onSuccess }: AlbumModalProps) => {
               )}
             </div>
             <p className="form-hint">Chấp nhận: JPG, PNG, GIF (tối đa 5MB)</p>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Nhạc nền</label>
+            <div className="audio-upload-container">
+              <input
+                ref={musicInputRef}
+                type="file"
+                accept="audio/*"
+                onChange={handleMusicFileChange}
+                className="file-input"
+                id="music-upload"
+              />
+              {formData.backgroundMusic ? (
+                <div className="audio-preview-container">
+                  <div className="audio-preview">
+                    <audio
+                      controls
+                      src={formData.backgroundMusic}
+                      className="preview-audio"
+                    >
+                      Trình duyệt của bạn không hỗ trợ phát audio.
+                    </audio>
+                    <button
+                      type="button"
+                      onClick={handleRemoveMusic}
+                      className="btn-remove-audio"
+                      title="Xóa nhạc nền"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label htmlFor="music-upload" className="audio-upload-label">
+                  <Upload size={20} />
+                  <span>{uploadingMusic ? `Đang tải... ${uploadProgressMusic}%` : 'Chọn nhạc nền'}</span>
+                  {uploadingMusic && (
+                    <div className="upload-progress-bar">
+                      <div
+                        className="upload-progress-fill"
+                        style={{ width: `${uploadProgressMusic}%` }}
+                      />
+                    </div>
+                  )}
+                </label>
+              )}
+            </div>
+            <p className="form-hint">Chấp nhận: MP3, WAV, M4A, OGG (tối đa 20MB)</p>
           </div>
 
           {error && <div className="form-error">{error}</div>}

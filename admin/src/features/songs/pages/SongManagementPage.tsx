@@ -131,7 +131,7 @@ const SongManagementPage = () => {
                 <th>ID</th>
                 <th>Tên bài hát</th>
                 <th>Nghệ sĩ</th>
-                <th>Lượt xem</th>
+                <th>Lượt nghe</th>
                 <th>Ngày tạo</th>
                 <th>Thao tác</th>
               </tr>

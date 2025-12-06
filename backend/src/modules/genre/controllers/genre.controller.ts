@@ -64,6 +64,12 @@ export class GenreController {
   updateSongGenres(@Body() dto: UpdateSongGenresDto) {
     return this.genreService.updateSongGenres(dto);
   }
+
+  @ApiOperation({ summary: "Lấy danh sách bài hát theo tên thể loại" })
+  @Get("name/:genreName/songs")
+  getSongsByGenreName(@Param("genreName") genreName: string) {
+    return this.genreService.getSongsByGenreName(genreName);
+  }
 }
 
 

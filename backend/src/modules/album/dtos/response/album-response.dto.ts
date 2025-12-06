@@ -7,6 +7,7 @@ export class AlbumResponseDto {
   artistId?: number;
   genreId?: number;
   coverImage?: string;
+  backgroundMusic?: string;
   type!: AlbumType;
   createdAt!: Date;
   updatedAt!: Date;

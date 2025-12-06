@@ -111,6 +111,34 @@ export class GenreService {
       songCount: Number(row.songCount),
     }));
   }
+
+  /**
+   * Lấy danh sách bài hát theo genre name.
+   */
+  async getSongsByGenreName(genreName: string): Promise<Song[]> {
+    const genre = await this.genreRepository.findOne({ 
+      where: { genreName } 
+    });
+    
+    if (!genre) {
+      throw new NotFoundException(`Genre with name "${genreName}" not found`);
+    }
+
+    const links = await this.songGenreRepository.find({ 
+      where: { genreId: genre.id } 
+    });
+    
+    if (links.length === 0) {
+      return [];
+    }
+
+    const songIds = links.map((l) => l.songId);
+    return this.songRepository.find({
+      where: { id: In(songIds) },
+      relations: ["artist"],
+      order: { createdAt: "DESC" },
+    });
+  }
 }
 
 

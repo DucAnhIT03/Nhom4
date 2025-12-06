@@ -117,6 +117,15 @@ export class SongService {
       order: { createdAt: "DESC" },
     });
   }
+
+  /**
+   * Tăng lượt nghe (views) của bài hát lên 1.
+   */
+  async incrementViews(id: number): Promise<Song> {
+    const song = await this.findOne(id);
+    song.views = (song.views || 0) + 1;
+    return this.songRepository.save(song);
+  }
 }
 
 

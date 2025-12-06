@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { Wishlist } from "../../../shared/schemas/wishlist.schema";
 import { SongHistory } from "../../../shared/schemas/song-history.schema";
 import { Song } from "../../../shared/schemas/song.schema";
@@ -36,8 +36,25 @@ export class UserLibraryService {
     return { isFavorite: true };
   }
 
-  getWishlist(userId: number): Promise<Wishlist[]> {
-    return this.wishlistRepository.find({ where: { userId } });
+  async getWishlist(userId: number): Promise<Array<{ song: Song; wishlist: Wishlist }>> {
+    const wishlists = await this.wishlistRepository.find({ where: { userId } });
+    
+    if (wishlists.length === 0) {
+      return [];
+    }
+
+    const songIds = wishlists.map(w => w.songId);
+    const songs = await this.songRepository.find({
+      where: { id: In(songIds) },
+      relations: ["artist"],
+      order: { createdAt: "DESC" },
+    });
+
+    // Map songs với wishlist theo đúng thứ tự
+    return wishlists.map(wishlist => ({
+      song: songs.find(s => s.id === wishlist.songId)!,
+      wishlist,
+    })).filter(item => item.song); // Lọc bỏ những bài hát không tìm thấy
   }
 
   async addHistory(dto: AddHistoryDto): Promise<void> {
@@ -48,11 +65,39 @@ export class UserLibraryService {
     await this.songHistoryRepository.save(entity);
   }
 
-  getHistory(userId: number): Promise<SongHistory[]> {
-    return this.songHistoryRepository.find({
+  async getHistory(userId: number): Promise<Array<{ song: Song; history: SongHistory }>> {
+    // Lấy tất cả lịch sử, sắp xếp theo thời gian phát mới nhất
+    const allHistory = await this.songHistoryRepository.find({
       where: { userId },
       order: { playedAt: "DESC" },
     });
+
+    if (allHistory.length === 0) {
+      return [];
+    }
+
+    // Lọc để chỉ lấy bài hát unique (lấy lần phát mới nhất của mỗi bài hát)
+    const uniqueSongIds = new Map<number, SongHistory>();
+    for (const history of allHistory) {
+      if (!uniqueSongIds.has(history.songId)) {
+        uniqueSongIds.set(history.songId, history);
+      }
+    }
+
+    const songIds = Array.from(uniqueSongIds.keys());
+    const songs = await this.songRepository.find({
+      where: { id: In(songIds) },
+      relations: ["artist"],
+    });
+
+    // Map songs với history theo đúng thứ tự (mới nhất trước)
+    const uniqueHistories = Array.from(uniqueSongIds.values());
+    uniqueHistories.sort((a, b) => b.playedAt.getTime() - a.playedAt.getTime());
+
+    return uniqueHistories.map(history => ({
+      song: songs.find(s => s.id === history.songId)!,
+      history,
+    })).filter(item => item.song); // Lọc bỏ những bài hát không tìm thấy
   }
 }
 
