@@ -56,7 +56,8 @@ CREATE TABLE IF NOT EXISTS otps (
 -- =========================
 CREATE TABLE IF NOT EXISTS genres (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  genre_name VARCHAR(255) NOT NULL
+  genre_name VARCHAR(255) NOT NULL,
+  image_url VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
 -- =========================
@@ -81,12 +82,15 @@ CREATE TABLE IF NOT EXISTS albums (
   id INT AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   release_date DATETIME NULL,
-  artist_id INT NOT NULL,
+  artist_id INT NULL,
+  genre_id INT NULL,
   cover_image VARCHAR(255) NULL,
   type ENUM('FREE','PREMIUM') NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_album_artist FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE CASCADE
+  CONSTRAINT fk_album_artist FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE CASCADE,
+  CONSTRAINT fk_album_genre FOREIGN KEY (genre_id) REFERENCES genres(id) ON DELETE CASCADE,
+  CONSTRAINT chk_album_owner CHECK (artist_id IS NOT NULL OR genre_id IS NOT NULL)
 ) ENGINE=InnoDB;
 
 -- =========================
@@ -97,7 +101,7 @@ CREATE TABLE IF NOT EXISTS songs (
   title VARCHAR(255) NOT NULL,
   duration TIME NULL,
   artist_id INT NOT NULL,
-  album_id INT NOT NULL,
+  album_id INT NULL,
   file_url VARCHAR(255) NULL,
   views INT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -11,6 +11,9 @@ export class Genre {
 
   @Column({ name: "genre_name", length: 255, nullable: false })
   genreName!: string;
+
+  @Column({ name: "image_url", length: 255, nullable: true })
+  imageUrl?: string;
 }
 
 

@@ -3,6 +3,9 @@ import {
   LayoutDashboard, 
   Users, 
   Music,
+  Disc,
+  Tag,
+  Album,
   LogOut
 } from 'lucide-react';
 import './Sidebar.css';
@@ -12,6 +15,9 @@ const Sidebar = () => {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: Users, label: 'Quản lý người dùng', path: '/dashboard/users', hasArrow: true },
     { icon: Music, label: 'Quản lý nghệ sĩ', path: '/dashboard/artists', hasArrow: true },
+    { icon: Album, label: 'Quản lý album', path: '/dashboard/albums', hasArrow: true },
+    { icon: Disc, label: 'Quản lý bài hát', path: '/dashboard/songs', hasArrow: true },
+    { icon: Tag, label: 'Quản lý thể loại', path: '/dashboard/genres', hasArrow: true },
   ];
 
   const handleLogout = () => {

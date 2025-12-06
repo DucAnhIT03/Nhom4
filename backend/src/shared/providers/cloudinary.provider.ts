@@ -61,9 +61,21 @@ export const uploadToCloudinary = async (
     cloudinary.config(config);
   }
 
+  // Xác định resource_type dựa trên mimetype
+  let resourceType: "image" | "video" | "raw" | "auto" = "auto";
+  if (file.mimetype.startsWith("image/")) {
+    resourceType = "image";
+  } else if (file.mimetype.startsWith("video/")) {
+    resourceType = "video";
+  } else if (file.mimetype.startsWith("audio/")) {
+    resourceType = "video"; // Cloudinary xử lý audio như video
+  } else {
+    resourceType = "raw";
+  }
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      { folder: "music-app", resource_type: "image", ...options },
+      { folder: "music-app", resource_type: resourceType, ...options },
       (error, result?: UploadApiResponse) => {
         if (error || !result) {
           return reject(error);

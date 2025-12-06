@@ -1,4 +1,5 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Artist } from "./artist.schema";
 
 /**
  * songs
@@ -18,8 +19,12 @@ export class Song {
   @Column({ name: "artist_id", type: "int", nullable: false })
   artistId!: number;
 
-  @Column({ name: "album_id", type: "int", nullable: false })
-  albumId!: number;
+  @ManyToOne(() => Artist)
+  @JoinColumn({ name: "artist_id" })
+  artist?: Artist;
+
+  @Column({ name: "album_id", type: "int", nullable: true })
+  albumId?: number;
 
   @Column({ name: "file_url", length: 255, nullable: true })
   fileUrl?: string;

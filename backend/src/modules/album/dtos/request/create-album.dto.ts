@@ -1,4 +1,4 @@
-import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Length } from "class-validator";
+import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Length, ValidateIf } from "class-validator";
 import { AlbumType } from "../../../../shared/schemas/album.schema";
 
 export class CreateAlbumDto {
@@ -11,8 +11,13 @@ export class CreateAlbumDto {
   @IsDateString()
   releaseDate?: string;
 
+  @ValidateIf((o) => !o.genreId)
   @IsInt()
-  artistId!: number;
+  artistId?: number;
+
+  @ValidateIf((o) => !o.artistId)
+  @IsInt()
+  genreId?: number;
 
   @IsOptional()
   @IsString()

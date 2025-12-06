@@ -1,4 +1,6 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Artist } from "./artist.schema";
+import { Genre } from "./genre.schema";
 
 export enum AlbumType {
   FREE = "FREE",
@@ -8,6 +10,7 @@ export enum AlbumType {
 /**
  * albums
  * Tập hợp bài hát.
+ * Album có thể thuộc về nghệ sĩ (artistId) hoặc thể loại nhạc (genreId)
  */
 @Entity({ name: "albums" })
 export class Album {
@@ -20,8 +23,19 @@ export class Album {
   @Column({ name: "release_date", type: "datetime", nullable: true })
   releaseDate?: Date;
 
-  @Column({ name: "artist_id", type: "int", nullable: false })
-  artistId!: number;
+  @Column({ name: "artist_id", type: "int", nullable: true })
+  artistId?: number;
+
+  @ManyToOne(() => Artist)
+  @JoinColumn({ name: "artist_id" })
+  artist?: Artist;
+
+  @Column({ name: "genre_id", type: "int", nullable: true })
+  genreId?: number;
+
+  @ManyToOne(() => Genre)
+  @JoinColumn({ name: "genre_id" })
+  genre?: Genre;
 
   @Column({ name: "cover_image", length: 255, nullable: true })
   coverImage?: string;

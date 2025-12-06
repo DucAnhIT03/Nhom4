@@ -20,6 +20,7 @@ const ArtistModal = ({ artist, onClose, onSuccess }: ArtistModalProps) => {
     age: '',
   });
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,10 +71,13 @@ const ArtistModal = ({ artist, onClose, onSuccess }: ArtistModalProps) => {
     }
 
     setUploading(true);
+    setUploadProgress(0);
     setError('');
 
     try {
-      const result = await uploadFile(file);
+      const result = await uploadFile(file, (progress) => {
+        setUploadProgress(progress);
+      });
       setFormData((prev) => ({
         ...prev,
         avatar: result.url,
@@ -82,6 +86,7 @@ const ArtistModal = ({ artist, onClose, onSuccess }: ArtistModalProps) => {
       setError(err.response?.data?.message || 'Không thể upload ảnh. Vui lòng thử lại.');
     } finally {
       setUploading(false);
+      setUploadProgress(0);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -210,7 +215,15 @@ const ArtistModal = ({ artist, onClose, onSuccess }: ArtistModalProps) => {
                 ) : (
                   <label htmlFor="avatar-upload" className="avatar-upload-label">
                     <Upload size={20} />
-                    <span>{uploading ? 'Đang tải...' : 'Chọn ảnh'}</span>
+                    <span>{uploading ? `Đang tải... ${uploadProgress}%` : 'Chọn ảnh'}</span>
+                    {uploading && (
+                      <div className="upload-progress-bar">
+                        <div 
+                          className="upload-progress-fill" 
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    )}
                   </label>
                 )}
               </div>

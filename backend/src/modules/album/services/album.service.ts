@@ -17,11 +17,16 @@ export class AlbumService {
   ) {}
 
   findAll(): Promise<Album[]> {
-    return this.albumRepository.find();
+    return this.albumRepository.find({
+      relations: ["artist", "genre"],
+    });
   }
 
   async findOne(id: number): Promise<Album> {
-    const album = await this.albumRepository.findOne({ where: { id } });
+    const album = await this.albumRepository.findOne({ 
+      where: { id },
+      relations: ["artist", "genre"],
+    });
     if (!album) {
       throw new NotFoundException("Album not found");
     }
@@ -38,10 +43,20 @@ export class AlbumService {
 
   async update(id: number, dto: UpdateAlbumDto): Promise<Album> {
     const album = await this.findOne(id);
-    const merged = this.albumRepository.merge(album, {
+    // Nếu có artistId thì xóa genreId và ngược lại
+    const updateData: any = {
       ...dto,
       releaseDate: dto.releaseDate ? new Date(dto.releaseDate) : album.releaseDate,
-    });
+    };
+    
+    if (dto.artistId !== undefined) {
+      updateData.genreId = null;
+    }
+    if (dto.genreId !== undefined) {
+      updateData.artistId = null;
+    }
+    
+    const merged = this.albumRepository.merge(album, updateData);
     return this.albumRepository.save(merged);
   }
 
@@ -66,7 +81,10 @@ export class AlbumService {
 
   async getSongs(albumId: number): Promise<Song[]> {
     await this.findOne(albumId);
-    return this.songRepository.find({ where: { albumId } });
+    return this.songRepository.find({ 
+      where: { albumId },
+      relations: ["artist"],
+    });
   }
 
   async addSongs(albumId: number, dto: UpdateAlbumSongsDto): Promise<void> {
@@ -85,6 +103,30 @@ export class AlbumService {
       id: In(dto.songIds),
       albumId,
     });
+  }
+
+  /**
+   * Tìm album theo artistId (ưu tiên album mới nhất)
+   */
+  async findByArtistId(artistId: number): Promise<Album | null> {
+    const albums = await this.albumRepository.find({
+      where: { artistId },
+      order: { createdAt: "DESC" },
+      take: 1,
+    });
+    return albums.length > 0 ? albums[0] : null;
+  }
+
+  /**
+   * Tìm album theo genreId (ưu tiên album mới nhất)
+   */
+  async findByGenreId(genreId: number): Promise<Album | null> {
+    const albums = await this.albumRepository.find({
+      where: { genreId },
+      order: { createdAt: "DESC" },
+      take: 1,
+    });
+    return albums.length > 0 ? albums[0] : null;
   }
 }
 

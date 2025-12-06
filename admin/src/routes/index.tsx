@@ -4,6 +4,9 @@ import AdminLayout from '../shared/layout/AdminLayout';
 import DashboardPage from '../features/dashboard/pages/DashboardPage';
 import UserManagementPage from '../features/users/pages/UserManagementPage';
 import ArtistManagementPage from '../features/artists/pages/ArtistManagementPage';
+import SongManagementPage from '../features/songs/pages/SongManagementPage';
+import GenreManagementPage from '../features/genres/pages/GenreManagementPage';
+import AlbumManagementPage from '../features/albums/pages/AlbumManagementPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -42,6 +45,18 @@ const router = createBrowserRouter([
       {
         path: 'artists',
         element: <ArtistManagementPage />,
+      },
+      {
+        path: 'songs',
+        element: <SongManagementPage />,
+      },
+      {
+        path: 'genres',
+        element: <GenreManagementPage />,
+      },
+      {
+        path: 'albums',
+        element: <AlbumManagementPage />,
       },
     ],
   },

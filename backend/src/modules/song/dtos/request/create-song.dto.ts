@@ -13,13 +13,14 @@ export class CreateSongDto {
   @IsInt()
   artistId!: number;
 
-  @IsInt()
-  albumId!: number;
-
   @IsOptional()
+  @IsInt()
+  albumId?: number;
+
   @IsString()
+  @IsNotEmpty()
   @Length(1, 255)
-  fileUrl?: string;
+  fileUrl!: string; // Bắt buộc vì phải upload file
 }
 
 

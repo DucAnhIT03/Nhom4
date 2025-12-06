@@ -16,7 +16,7 @@
   background: #1a1a1a;
   border-radius: 12px;
   width: 90%;
-  max-width: 600px;
+  max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -60,19 +60,8 @@
   padding: 24px;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
 .form-group {
   margin-bottom: 20px;
-}
-
-.form-row .form-group {
-  margin-bottom: 0;
 }
 
 .form-label {
@@ -96,7 +85,6 @@
   transition: all 0.3s ease;
   box-sizing: border-box;
   font-family: inherit;
-  resize: vertical;
 }
 
 .form-input:focus {
@@ -165,8 +153,8 @@
   cursor: not-allowed;
 }
 
-/* Avatar Upload Styles */
-.avatar-upload-container {
+/* Image Upload Styles */
+.image-upload-container {
   position: relative;
 }
 
@@ -174,7 +162,7 @@
   display: none;
 }
 
-.avatar-upload-label {
+.image-upload-label {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -190,13 +178,13 @@
   min-height: 120px;
 }
 
-.avatar-upload-label:hover {
+.image-upload-label:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: #3BC8E7;
   color: #3BC8E7;
 }
 
-.avatar-upload-label span {
+.image-upload-label span {
   font-size: 14px;
   font-weight: 500;
 }
@@ -217,15 +205,15 @@
   transition: width 0.3s ease;
 }
 
-.avatar-preview-container {
+.image-preview-container {
   position: relative;
   display: inline-block;
   width: 100%;
 }
 
-.avatar-preview {
+.image-preview {
   width: 100%;
-  height: 120px;
+  height: 200px;
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.2);

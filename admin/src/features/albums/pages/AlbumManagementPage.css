@@ -1,4 +1,4 @@
-.artist-management-page {
+.album-management-page {
   width: 100%;
   color: #ffffff;
 }
@@ -95,16 +95,16 @@
   color: #a0aec0;
 }
 
-.artists-table {
+.albums-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.artists-table thead {
+.albums-table thead {
   background: rgba(59, 200, 231, 0.1);
 }
 
-.artists-table th {
+.albums-table th {
   padding: 16px;
   text-align: left;
   font-size: 14px;
@@ -112,54 +112,10 @@
   color: #3BC8E7;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   vertical-align: middle;
+  box-sizing: border-box;
 }
 
-.artists-table th:nth-child(1),
-.artists-table td:nth-child(1) {
-  width: 60px;
-  min-width: 60px;
-  text-align: center;
-}
-
-.artists-table th:nth-child(2),
-.artists-table td:nth-child(2) {
-  width: 200px;
-  min-width: 200px;
-}
-
-.artists-table th:nth-child(3),
-.artists-table td:nth-child(3) {
-  width: 120px;
-  min-width: 120px;
-}
-
-.artists-table th:nth-child(4),
-.artists-table td:nth-child(4) {
-  width: 80px;
-  min-width: 80px;
-  text-align: center;
-}
-
-.artists-table th:nth-child(5),
-.artists-table td:nth-child(5) {
-  width: 250px;
-  min-width: 250px;
-}
-
-.artists-table th:nth-child(6),
-.artists-table td:nth-child(6) {
-  width: 130px;
-  min-width: 130px;
-}
-
-.artists-table th:nth-child(7),
-.artists-table td:nth-child(7) {
-  width: 140px;
-  min-width: 140px;
-  text-align: center;
-}
-
-.artists-table td {
+.albums-table td {
   padding: 16px;
   font-size: 14px;
   color: #e2e8f0;
@@ -167,10 +123,55 @@
   vertical-align: middle;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  box-sizing: border-box;
+}
+
+.albums-table th:nth-child(1),
+.albums-table td:nth-child(1) {
+  width: 60px;
+  min-width: 60px;
+  text-align: center;
+}
+
+.albums-table th:nth-child(2),
+.albums-table td:nth-child(2) {
   text-align: left;
 }
 
-.artists-table tbody tr:hover {
+.albums-table th:nth-child(3),
+.albums-table td:nth-child(3) {
+  text-align: left;
+}
+
+.albums-table th:nth-child(4),
+.albums-table td:nth-child(4) {
+  text-align: center;
+  width: 120px;
+  min-width: 120px;
+}
+
+.albums-table th:nth-child(5),
+.albums-table td:nth-child(5) {
+  text-align: center;
+  width: 130px;
+  min-width: 130px;
+}
+
+.albums-table th:nth-child(6),
+.albums-table td:nth-child(6) {
+  text-align: center;
+  width: 130px;
+  min-width: 130px;
+}
+
+.albums-table th:nth-child(7),
+.albums-table td:nth-child(7) {
+  text-align: center;
+  width: 120px;
+  min-width: 120px;
+}
+
+.albums-table tbody tr:hover {
   background: rgba(59, 200, 231, 0.05);
 }
 
@@ -180,39 +181,52 @@
   color: #718096;
 }
 
-.artist-name-cell {
+.album-title-cell {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.artist-avatar-small {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+.album-title-clickable {
+  cursor: pointer;
+  color: #3BC8E7;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.album-title-clickable:hover {
+  color: #2ba8c7;
+  text-decoration: underline;
+}
+
+.album-cover-small {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
   object-fit: cover;
   flex-shrink: 0;
 }
 
-.bio-cell {
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.album-type-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.album-type-badge.free {
+  background: rgba(59, 200, 231, 0.2);
+  color: #3BC8E7;
+}
+
+.album-type-badge.premium {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
 }
 
 .text-muted {
   color: #718096;
-}
-
-.avatar-link {
-  color: #3BC8E7;
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-.avatar-link:hover {
-  color: #2ba8c7;
-  text-decoration: underline;
 }
 
 .action-buttons {
@@ -252,65 +266,19 @@
   background: rgba(229, 62, 62, 0.3);
 }
 
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  margin-top: 24px;
-}
-
-.pagination-btn {
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background: #3BC8E7;
-  border-color: #3BC8E7;
-}
-
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pagination-info {
-  color: #a0aec0;
-  font-size: 14px;
-}
-
-.artist-name-clickable {
-  cursor: pointer;
-  color: #3BC8E7;
-  transition: color 0.3s ease;
-  text-decoration: none;
-}
-
-.artist-name-clickable:hover {
-  color: #2ba8c7;
-  text-decoration: underline;
-}
-
-/* Songs Modal Styles */
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.7);
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
+  padding: 20px;
 }
 
 .songs-modal-content {
@@ -318,11 +286,11 @@
   border-radius: 12px;
   width: 90%;
   max-width: 1000px;
-  max-height: 80vh;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .songs-modal-header {
@@ -334,18 +302,36 @@
 }
 
 .songs-modal-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0 0 8px 0;
   display: flex;
   align-items: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px 0;
 }
 
 .songs-modal-subtitle {
   font-size: 14px;
   color: #a0aec0;
   margin: 0;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #a0aec0;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .songs-modal-body {
@@ -447,6 +433,5 @@
 .song-audio-player::-webkit-media-controls-current-time-display,
 .song-audio-player::-webkit-media-controls-time-remaining-display {
   color: #ffffff;
-  font-size: 12px;
 }
 

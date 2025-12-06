@@ -5,13 +5,23 @@ export interface UploadResponse {
   url: string;
 }
 
-export const uploadFile = async (file: File): Promise<UploadResponse> => {
+export const uploadFile = async (
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<UploadResponse> => {
   const formData = new FormData();
   formData.append('file', file);
 
   const response = await axios.post<UploadResponse>('/upload/single', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
+    },
+    timeout: 300000, // 5 phút cho upload (file audio có thể lớn)
+    onUploadProgress: (progressEvent) => {
+      if (onProgress && progressEvent.total) {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(percentCompleted);
+      }
     },
   });
   return response.data;

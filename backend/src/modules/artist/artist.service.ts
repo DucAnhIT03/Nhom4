@@ -58,6 +58,8 @@ export class ArtistService {
       artistName: createArtistDto.artistName,
       bio: createArtistDto.bio,
       avatar: createArtistDto.avatar,
+      nationality: createArtistDto.nationality,
+      age: createArtistDto.age,
     });
 
     const savedArtist = await this.artistRepository.save(artist);

@@ -51,6 +51,12 @@ export class SongController {
     return this.songService.getWeeklyTopTracks(parsedLimit);
   }
 
+  @ApiOperation({ summary: "Lấy danh sách bài hát theo artist ID" })
+  @Get("artist/:artistId")
+  findByArtistId(@Param("artistId", ParseIntPipe) artistId: number) {
+    return this.songService.findByArtistId(artistId);
+  }
+
   @ApiOperation({ summary: "Cập nhật thông tin bài hát" })
   @Patch(":id")
   update(@Param("id", ParseIntPipe) id: number, @Body() dto: UpdateSongDto) {

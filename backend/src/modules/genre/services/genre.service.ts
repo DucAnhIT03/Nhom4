@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, Inject, forwardRef } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 import { Genre } from "../../../shared/schemas/genre.schema";
@@ -7,6 +7,7 @@ import { Song } from "../../../shared/schemas/song.schema";
 import { CreateGenreDto } from "../dtos/request/create-genre.dto";
 import { UpdateGenreDto } from "../dtos/request/update-genre.dto";
 import { UpdateSongGenresDto } from "../dtos/request/update-song-genres.dto";
+import { AlbumService } from "../../album/services/album.service";
 
 @Injectable()
 export class GenreService {
@@ -17,10 +18,14 @@ export class GenreService {
     private readonly songGenreRepository: Repository<SongGenre>,
     @InjectRepository(Song)
     private readonly songRepository: Repository<Song>,
+    @Inject(forwardRef(() => AlbumService))
+    private readonly albumService: AlbumService,
   ) {}
 
   findAll(): Promise<Genre[]> {
-    return this.genreRepository.find();
+    return this.genreRepository.find({
+      order: { id: 'ASC' }, // Sắp xếp theo id để thể loại thêm trước hiển thị trước
+    });
   }
 
   async findOne(id: number): Promise<Genre> {
@@ -59,6 +64,16 @@ export class GenreService {
       this.songGenreRepository.create({ songId: dto.songId, genreId }),
     );
     await this.songGenreRepository.save(entities);
+
+    // Tự động tìm album của thể loại đầu tiên và cập nhật albumId của bài hát
+    // (ưu tiên album của thể loại hơn album của nghệ sĩ)
+    if (dto.genreIds.length > 0) {
+      const firstGenreId = dto.genreIds[0];
+      const album = await this.albumService.findByGenreId(firstGenreId);
+      if (album) {
+        await this.songRepository.update(dto.songId, { albumId: album.id });
+      }
+    }
   }
 
   async getGenresOfSong(songId: number): Promise<Genre[]> {

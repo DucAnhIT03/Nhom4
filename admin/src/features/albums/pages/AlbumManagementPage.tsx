@@ -1,57 +1,54 @@
 import { useState, useEffect } from 'react';
 import { Search, Trash2, Edit, Plus, Music, X } from 'lucide-react';
-import { getArtists, deleteArtist } from '@/services/artist.service';
-import type { Artist } from '@/services/artist.service';
-import { getSongsByArtistId, deleteSong } from '@/services/song.service';
+import { getAlbums, deleteAlbum, getSongsByAlbumId } from '@/services/album.service';
+import type { Album } from '@/services/album.service';
 import type { Song } from '@/services/song.service';
-import ConfirmModal from '../components/ConfirmModal';
-import ArtistModal from '../components/ArtistModal';
-import './ArtistManagementPage.css';
+import { deleteSong } from '@/services/song.service';
+import ConfirmModal from '../../artists/components/ConfirmModal';
+import AlbumModal from '../components/AlbumModal';
+import './AlbumManagementPage.css';
 
-const ArtistManagementPage = () => {
-  const [artists, setArtists] = useState<Artist[]>([]);
+const AlbumManagementPage = () => {
+  const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    artist: Artist | null;
+    album: Album | null;
   }>({
     isOpen: false,
-    artist: null,
+    album: null,
   });
-  const [artistModal, setArtistModal] = useState<{
+  const [albumModal, setAlbumModal] = useState<{
     isOpen: boolean;
-    artist: Artist | null;
+    album: Album | null;
   }>({
     isOpen: false,
-    artist: null,
+    album: null,
   });
   const [songsModal, setSongsModal] = useState<{
     isOpen: boolean;
-    artist: Artist | null;
+    album: Album | null;
     songs: Song[];
     loading: boolean;
   }>({
     isOpen: false,
-    artist: null,
+    album: null,
     songs: [],
     loading: false,
   });
-  const limit = 10;
 
   useEffect(() => {
-    loadArtists();
-  }, [currentPage, searchTerm]);
+    loadAlbums();
+  }, []);
 
   // Lắng nghe sự kiện khi bài hát bị xóa từ trang quản lý bài hát
   useEffect(() => {
     const handleSongDeleted = async () => {
       // Nếu modal đang mở, reload danh sách bài hát
-      if (songsModal.isOpen && songsModal.artist) {
+      if (songsModal.isOpen && songsModal.album) {
         try {
-          const songs = await getSongsByArtistId(songsModal.artist.id);
+          const songs = await getSongsByAlbumId(songsModal.album.id);
           setSongsModal((prev) => ({
             ...prev,
             songs,
@@ -67,75 +64,77 @@ const ArtistManagementPage = () => {
     return () => {
       window.removeEventListener('songDeleted', handleSongDeleted);
     };
-  }, [songsModal.isOpen, songsModal.artist]);
+  }, [songsModal.isOpen, songsModal.album]);
 
-  const loadArtists = async () => {
+  const loadAlbums = async () => {
     setLoading(true);
     try {
-      const response = await getArtists(currentPage, limit, searchTerm);
-      setArtists(response.data || []);
-      setTotal(response.total || 0);
+      const data = await getAlbums();
+      setAlbums(data || []);
     } catch (error) {
-      console.error('Error loading artists:', error);
+      console.error('Error loading albums:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const filteredAlbums = albums.filter((album) =>
+    album.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1); // Reset về trang đầu khi tìm kiếm
   };
 
-  const handleDelete = (artist: Artist) => {
+  const handleDelete = (album: Album) => {
     setConfirmModal({
       isOpen: true,
-      artist,
+      album,
     });
   };
 
-  const handleEdit = (artist: Artist) => {
-    setArtistModal({
+  const handleEdit = (album: Album) => {
+    setAlbumModal({
       isOpen: true,
-      artist,
+      album,
     });
   };
 
   const handleAdd = () => {
-    setArtistModal({
+    setAlbumModal({
       isOpen: true,
-      artist: null,
+      album: null,
     });
   };
 
   const handleConfirmDelete = async () => {
-    if (!confirmModal.artist) return;
+    if (!confirmModal.album) return;
 
     try {
-      await deleteArtist(confirmModal.artist.id);
-      setConfirmModal({ isOpen: false, artist: null });
-      loadArtists();
+      await deleteAlbum(confirmModal.album.id);
+      setConfirmModal({ isOpen: false, album: null });
+      loadAlbums();
     } catch (error) {
-      console.error('Error deleting artist:', error);
-      alert('Không thể xóa nghệ sĩ này');
+      console.error('Error deleting album:', error);
+      alert('Không thể xóa album này');
     }
   };
 
   const handleModalSuccess = () => {
-    setArtistModal({ isOpen: false, artist: null });
-    loadArtists();
+    setAlbumModal({ isOpen: false, album: null });
+    loadAlbums();
   };
 
-  const handleViewSongs = async (artist: Artist) => {
+  const handleViewSongs = async (album: Album) => {
     setSongsModal({
       isOpen: true,
-      artist,
+      album,
       songs: [],
       loading: true,
     });
 
     try {
-      const songs = await getSongsByArtistId(artist.id);
+      const songs = await getSongsByAlbumId(album.id);
       setSongsModal((prev) => ({
         ...prev,
         songs,
@@ -158,31 +157,30 @@ const ArtistManagementPage = () => {
 
     try {
       await deleteSong(song.id);
-      // Cập nhật danh sách bài hát sau khi xóa
-      setSongsModal((prev) => ({
-        ...prev,
-        songs: prev.songs.filter((s) => s.id !== song.id),
-      }));
-      // Reload danh sách nghệ sĩ để đảm bảo đồng bộ
-      loadArtists();
+      // Reload danh sách bài hát
+      if (songsModal.album) {
+        const songs = await getSongsByAlbumId(songsModal.album.id);
+        setSongsModal((prev) => ({
+          ...prev,
+          songs,
+        }));
+      }
     } catch (error) {
       console.error('Error deleting song:', error);
       alert('Không thể xóa bài hát này');
     }
   };
 
-  const totalPages = Math.ceil(total / limit);
-
   return (
-    <div className="artist-management-page">
+    <div className="album-management-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Quản lý nghệ sĩ</h1>
-          <p className="page-subtitle">Quản lý tất cả nghệ sĩ trong hệ thống</p>
+          <h1 className="page-title">Quản lý album</h1>
+          <p className="page-subtitle">Quản lý tất cả album trong hệ thống</p>
         </div>
         <button className="btn-primary" onClick={handleAdd}>
           <Plus size={20} />
-          Thêm nghệ sĩ
+          Thêm album
         </button>
       </div>
 
@@ -191,7 +189,7 @@ const ArtistManagementPage = () => {
           <Search className="search-icon" size={20} />
           <input
             type="text"
-            placeholder="Tìm kiếm theo tên nghệ sĩ..."
+            placeholder="Tìm kiếm theo tên album..."
             value={searchTerm}
             onChange={handleSearch}
             className="search-input"
@@ -203,82 +201,82 @@ const ArtistManagementPage = () => {
         {loading ? (
           <div className="loading">Đang tải...</div>
         ) : (
-          <table className="artists-table">
+          <table className="albums-table">
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Tên nghệ sĩ</th>
-                <th>Quốc tịch</th>
-                <th>Tuổi</th>
-                <th>Tiểu sử</th>
+                <th>Tên album</th>
+                <th>Nghệ sĩ</th>
+                <th>Loại</th>
+                <th>Ngày phát hành</th>
                 <th>Ngày tạo</th>
                 <th>Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {artists.length === 0 ? (
+              {filteredAlbums.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="empty-state">
                     {searchTerm ? 'Không tìm thấy kết quả' : 'Không có dữ liệu'}
                   </td>
                 </tr>
               ) : (
-                artists.map((artist) => (
-                  <tr key={artist.id}>
-                    <td>{artist.id}</td>
+                filteredAlbums.map((album) => (
+                  <tr key={album.id}>
+                    <td>{album.id}</td>
                     <td>
-                      <div className="artist-name-cell">
-                        {artist.avatar && (
+                      <div className="album-title-cell">
+                        {album.coverImage && (
                           <img
-                            src={artist.avatar}
-                            alt={artist.artistName}
-                            className="artist-avatar-small"
+                            src={album.coverImage}
+                            alt={album.title}
+                            className="album-cover-small"
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = 'none';
                             }}
                           />
                         )}
                         <span
-                          className="artist-name-clickable"
-                          onClick={() => handleViewSongs(artist)}
+                          className="album-title-clickable"
+                          onClick={() => handleViewSongs(album)}
                           title="Xem danh sách bài hát"
                         >
-                          {artist.artistName}
+                          {album.title}
                         </span>
                       </div>
                     </td>
                     <td>
-                      {artist.nationality ? (
-                        <span>{artist.nationality}</span>
+                      {album.artist ? (
+                        <span>Nghệ sĩ: {album.artist.artistName}</span>
+                      ) : album.genre ? (
+                        <span>Thể loại: {album.genre.genreName}</span>
                       ) : (
                         <span className="text-muted">-</span>
                       )}
                     </td>
                     <td>
-                      {artist.age ? (
-                        <span>{artist.age}</span>
-                      ) : (
-                        <span className="text-muted">-</span>
-                      )}
+                      <span className={`album-type-badge ${album.type.toLowerCase()}`}>
+                        {album.type === 'FREE' ? 'Miễn phí' : 'Premium'}
+                      </span>
                     </td>
                     <td>
-                      <div className="bio-cell">
-                        {artist.bio ? (
-                          <span title={artist.bio}>
-                            {artist.bio.length > 50
-                              ? `${artist.bio.substring(0, 50)}...`
-                              : artist.bio}
-                          </span>
-                        ) : (
-                          <span className="text-muted">-</span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      {artist.createdAt
+                      {album.releaseDate
                         ? (() => {
                             try {
-                              const date = new Date(artist.createdAt);
+                              const date = new Date(album.releaseDate);
+                              if (isNaN(date.getTime())) return '-';
+                              return date.toLocaleDateString('vi-VN');
+                            } catch {
+                              return '-';
+                            }
+                          })()
+                        : '-'}
+                    </td>
+                    <td>
+                      {album.createdAt
+                        ? (() => {
+                            try {
+                              const date = new Date(album.createdAt);
                               if (isNaN(date.getTime())) return '-';
                               return date.toLocaleDateString('vi-VN');
                             } catch {
@@ -291,14 +289,14 @@ const ArtistManagementPage = () => {
                       <div className="action-buttons">
                         <button
                           className="btn-icon btn-edit"
-                          onClick={() => handleEdit(artist)}
+                          onClick={() => handleEdit(album)}
                           title="Chỉnh sửa"
                         >
                           <Edit size={16} />
                         </button>
                         <button
                           className="btn-icon btn-delete"
-                          onClick={() => handleDelete(artist)}
+                          onClick={() => handleDelete(album)}
                           title="Xóa"
                         >
                           <Trash2 size={16} />
@@ -313,54 +311,32 @@ const ArtistManagementPage = () => {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="pagination-btn"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            Trước
-          </button>
-          <span className="pagination-info">
-            Trang {currentPage} / {totalPages}
-          </span>
-          <button
-            className="pagination-btn"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Sau
-          </button>
-        </div>
-      )}
-
       <ConfirmModal
         isOpen={confirmModal.isOpen}
-        title="Xác nhận xóa nghệ sĩ"
-        message={`Bạn có chắc chắn muốn xóa nghệ sĩ "${confirmModal.artist?.artistName}"? Hành động này không thể hoàn tác.`}
+        title="Xác nhận xóa album"
+        message={`Bạn có chắc chắn muốn xóa album "${confirmModal.album?.title}"? Hành động này không thể hoàn tác.`}
         confirmText="Xóa"
         type="danger"
         onConfirm={handleConfirmDelete}
-        onCancel={() => setConfirmModal({ isOpen: false, artist: null })}
+        onCancel={() => setConfirmModal({ isOpen: false, album: null })}
       />
 
-      {artistModal.isOpen && (
-        <ArtistModal
-          artist={artistModal.artist}
-          onClose={() => setArtistModal({ isOpen: false, artist: null })}
+      {albumModal.isOpen && (
+        <AlbumModal
+          album={albumModal.album}
+          onClose={() => setAlbumModal({ isOpen: false, album: null })}
           onSuccess={handleModalSuccess}
         />
       )}
 
       {songsModal.isOpen && (
-        <div className="modal-overlay" onClick={() => setSongsModal({ isOpen: false, artist: null, songs: [], loading: false })}>
+        <div className="modal-overlay" onClick={() => setSongsModal({ isOpen: false, album: null, songs: [], loading: false })}>
           <div className="songs-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="songs-modal-header">
               <div>
                 <h2 className="songs-modal-title">
                   <Music size={24} style={{ marginRight: '8px' }} />
-                  Danh sách bài hát của {songsModal.artist?.artistName}
+                  Danh sách bài hát của album "{songsModal.album?.title}"
                 </h2>
                 <p className="songs-modal-subtitle">
                   {songsModal.loading ? 'Đang tải...' : `${songsModal.songs.length} bài hát`}
@@ -368,7 +344,7 @@ const ArtistManagementPage = () => {
               </div>
               <button
                 className="modal-close"
-                onClick={() => setSongsModal({ isOpen: false, artist: null, songs: [], loading: false })}
+                onClick={() => setSongsModal({ isOpen: false, album: null, songs: [], loading: false })}
               >
                 <X size={20} />
               </button>
@@ -378,7 +354,7 @@ const ArtistManagementPage = () => {
               {songsModal.loading ? (
                 <div className="loading">Đang tải danh sách bài hát...</div>
               ) : songsModal.songs.length === 0 ? (
-                <div className="empty-state">Nghệ sĩ này chưa có bài hát nào</div>
+                <div className="empty-state">Album này chưa có bài hát nào</div>
               ) : (
                 <table className="songs-list-table">
                   <thead>
@@ -449,5 +425,5 @@ const ArtistManagementPage = () => {
   );
 };
 
-export default ArtistManagementPage;
+export default AlbumManagementPage;
 

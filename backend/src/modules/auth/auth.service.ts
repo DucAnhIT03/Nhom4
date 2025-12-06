@@ -101,6 +101,11 @@ export class AuthService {
       throw new UnauthorizedException("Invalid email or password");
     }
 
+    // Kiểm tra trạng thái tài khoản
+    if (user.status === UserStatus.BLOCKED) {
+      throw new UnauthorizedException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
+    }
+
     let isValid = false;
 
     // Nếu mật khẩu trong DB có dạng bcrypt hash
