@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { FaSearch } from "react-icons/fa";
 import { IoLanguage } from "react-icons/io5";
 import AuthModal from "../LoginRegister/AuthModal";
@@ -28,20 +28,57 @@ const Header: React.FC = () => {
     }
   };
 
+  // Hàm load role từ API - sử dụng useCallback để tránh re-create function
+  const loadRoleFromAPI = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setRole(null);
+      return;
+    }
+
+    try {
+      const { getCurrentUser } = await import("../../services/auth.service");
+      const userProfile = await getCurrentUser();
+      if (userProfile.role) {
+        // Normalize role: loại bỏ "ROLE_" prefix và chuyển về lowercase
+        const normalizedRole = userProfile.role.replace(/^ROLE_/i, "").toLowerCase();
+        setRole(normalizedRole);
+        localStorage.setItem("role", normalizedRole);
+      }
+      if ((userProfile as any).profileImage) {
+        localStorage.setItem("avatar", (userProfile as any).profileImage);
+        setAvatar((userProfile as any).profileImage);
+      }
+      if (userProfile.firstName && userProfile.lastName) {
+        const fullName = `${userProfile.firstName} ${userProfile.lastName}`;
+        localStorage.setItem("userName", fullName);
+        setUserName(fullName);
+      }
+    } catch (err) {
+      console.warn("Không thể lấy thông tin user từ API:", err);
+      // Giữ nguyên từ localStorage nếu API lỗi
+      const r = localStorage.getItem("role");
+      const a = localStorage.getItem("avatar");
+      const name = localStorage.getItem("userName");
+      setRole(r);
+      setAvatar(a || getDefaultAvatar(r));
+      setUserName(name);
+    }
+  }, []); // Empty dependency array vì function không phụ thuộc vào props/state
+
   const loadUserInfo = () => {
     const token = localStorage.getItem("token");
     const r = localStorage.getItem("role");
     const a = localStorage.getItem("avatar");
     const name = localStorage.getItem("userName");
     
-    // Nếu có token nhưng chưa có role, thử lấy lại
-    if (token && !r) {
-      // Có thể gọi API để lấy role nếu cần
-      // Tạm thời set role mặc định
-      localStorage.setItem("role", "user");
-      setRole("user");
-    } else {
-      setRole(r);
+    // Normalize role từ localStorage
+    if (r) {
+      const normalizedRole = r.replace(/^ROLE_/i, "").toLowerCase();
+      setRole(normalizedRole);
+    } else if (token) {
+      // Nếu có token nhưng chưa có role, thử lấy lại
+      loadRoleFromAPI();
     }
     setAvatar(a || getDefaultAvatar(r));
     setUserName(name);
@@ -68,17 +105,34 @@ const Header: React.FC = () => {
     loadUserInfo();
     loadUserAvatar(); // Load avatar từ API nếu có
     
+    // Refresh role từ API ngay lập tức
+    loadRoleFromAPI();
+    
+    // Tự động refresh role mỗi 30 giây để cập nhật khi admin gán quyền
+    const intervalId = setInterval(() => {
+      loadRoleFromAPI();
+    }, 30000); // 30 giây
+    
+    // Refresh role khi user quay lại tab/window (focus)
+    const handleFocus = () => {
+      loadRoleFromAPI();
+    };
+    window.addEventListener("focus", handleFocus);
+    
     // Lắng nghe sự kiện storage để cập nhật khi login/logout từ tab khác
     const handleStorageChange = () => {
       loadUserInfo();
       loadUserAvatar();
+      loadRoleFromAPI();
     };
     window.addEventListener("storage", handleStorageChange);
     
     return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
       window.removeEventListener("storage", handleStorageChange);
     };
-  }, []);
+  }, [loadRoleFromAPI]); // Thêm loadRoleFromAPI vào dependency array
 
   const openModal = (mode: "login" | "register") => {
     setAuthMode(mode);

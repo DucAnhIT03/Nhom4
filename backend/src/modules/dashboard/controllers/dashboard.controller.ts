@@ -1,7 +1,11 @@
-import { Controller, Get, Query } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { ApiOperation, ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { DashboardService } from "../services/dashboard.service";
 import { AdminDashboardStatsDto } from "../dtos/response/admin-dashboard-stats.dto";
+import { AuthGuard } from "../../../common/guards/auth.guard";
+import { RolesGuard } from "../../../common/guards/roles.guard";
+import { Roles } from "../../../common/decorators/roles.decorator";
+import { RoleName } from "../../../shared/schemas/role.schema";
 
 class DashboardFilterQuery {
   from?: string;
@@ -10,6 +14,9 @@ class DashboardFilterQuery {
 
 @ApiTags("Dashboard quản trị")
 @Controller("dashboard")
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(RoleName.ADMIN)
+@ApiBearerAuth("access-token")
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 

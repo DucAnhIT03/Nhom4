@@ -8,7 +8,9 @@ import {
   IoVolumeMuteSharp,
   IoShuffleOutline,
   IoRepeatOutline,
+  IoRepeat,
 } from "react-icons/io5";
+import { useMusic } from "../../contexts/MusicContext";
 
 interface Song {
   title: string;
@@ -30,6 +32,14 @@ const formatTime = (time: number) => {
 
 const MusicPlayerBar = ({ song }: MusicPlayerBarProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const {
+    isShuffle,
+    setIsShuffle,
+    repeatMode,
+    setRepeatMode,
+    playNext,
+    playPrevious,
+  } = useMusic();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.8);
@@ -69,6 +79,14 @@ const MusicPlayerBar = ({ song }: MusicPlayerBarProps) => {
     const handleEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
+      // Tự động chuyển bài tiếp theo khi hết
+      if (repeatMode !== 'one') {
+        playNext();
+      } else {
+        // Lặp lại bài hiện tại
+        audio.currentTime = 0;
+        audio.play();
+      }
     };
 
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -149,18 +167,61 @@ const MusicPlayerBar = ({ song }: MusicPlayerBarProps) => {
         {/* Center */}
         <div className="flex flex-col items-center justify-center">
           <div className="flex items-center gap-4 text-2xl text-gray-300">
-            <IoShuffleOutline />
-            <IoPlaySkipBackSharp />
+            <button
+              onClick={() => setIsShuffle(!isShuffle)}
+              className={`transition-colors ${isShuffle ? 'text-[#3BC8E7]' : 'text-gray-300 hover:text-white'}`}
+              title="Shuffle"
+            >
+              <IoShuffleOutline />
+            </button>
+            
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Previous clicked');
+                playPrevious();
+              }}
+              className="text-gray-300 hover:text-white transition-colors cursor-pointer"
+              title="Previous"
+            >
+              <IoPlaySkipBackSharp />
+            </button>
 
             <button
               onClick={handlePlayPause}
-              className="bg-white text-black rounded-full w-10 h-10 flex items-center justify-center"
+              className="bg-white text-black rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-200 transition-colors"
+              title={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? <IoPauseSharp /> : <IoPlaySharp />}
             </button>
 
-            <IoPlaySkipForwardSharp />
-            <IoRepeatOutline />
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Next clicked');
+                playNext();
+              }}
+              className="text-gray-300 hover:text-white transition-colors cursor-pointer"
+              title="Next"
+            >
+              <IoPlaySkipForwardSharp />
+            </button>
+            
+            <button
+              onClick={() => {
+                if (repeatMode === 'off') setRepeatMode('all');
+                else if (repeatMode === 'all') setRepeatMode('one');
+                else setRepeatMode('off');
+              }}
+              className={`transition-colors ${
+                repeatMode !== 'off' ? 'text-[#3BC8E7]' : 'text-gray-300 hover:text-white'
+              }`}
+              title={`Repeat: ${repeatMode === 'off' ? 'Off' : repeatMode === 'all' ? 'All' : 'One'}`}
+            >
+              {repeatMode === 'one' ? <IoRepeat /> : <IoRepeatOutline />}
+            </button>
           </div>
 
           <div className="flex items-center gap-2 w-full mt-2">

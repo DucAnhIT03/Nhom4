@@ -7,6 +7,7 @@ import ArtistManagementPage from '../features/artists/pages/ArtistManagementPage
 import SongManagementPage from '../features/songs/pages/SongManagementPage';
 import GenreManagementPage from '../features/genres/pages/GenreManagementPage';
 import AlbumManagementPage from '../features/albums/pages/AlbumManagementPage';
+import BannerManagementPage from '../features/banners/pages/BannerManagementPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -57,6 +58,10 @@ const router = createBrowserRouter([
       {
         path: 'albums',
         element: <AlbumManagementPage />,
+      },
+      {
+        path: 'banners',
+        element: <BannerManagementPage />,
       },
     ],
   },

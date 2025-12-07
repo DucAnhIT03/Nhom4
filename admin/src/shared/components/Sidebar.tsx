@@ -6,6 +6,7 @@ import {
   Disc,
   Tag,
   Album,
+  Image,
   LogOut
 } from 'lucide-react';
 import './Sidebar.css';
@@ -18,6 +19,7 @@ const Sidebar = () => {
     { icon: Album, label: 'Quản lý album', path: '/dashboard/albums', hasArrow: true },
     { icon: Disc, label: 'Quản lý bài hát', path: '/dashboard/songs', hasArrow: true },
     { icon: Tag, label: 'Quản lý thể loại', path: '/dashboard/genres', hasArrow: true },
+    { icon: Image, label: 'Quản lý banner', path: '/dashboard/banners', hasArrow: true },
   ];
 
   const handleLogout = () => {

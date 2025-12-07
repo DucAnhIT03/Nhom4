@@ -3,19 +3,19 @@ import { useState, useEffect } from "react";
 import MusicPlayerBar from "./MusicPlayerBar";
 import { FaChevronRight, FaChevronLeft } from "react-icons/fa";
 import { HiDotsHorizontal } from "react-icons/hi";
-
-interface Song {
-  title: string;
-  artist: string;
-  image: string;
-  audioUrl: string;
-}
+import { useMusic, type Song } from "../../contexts/MusicContext";
+import { getArtists, type ArtistWithTotalViews } from "../../services/artist.service";
+import { getSongsByArtistId, getNewReleases } from "../../services/song.service";
+import { getAlbums } from "../../services/album.service";
 
 const Container = () => {
-  const [currentlyPlayingSong, setCurrentlyPlayingSong] = useState<Song | null>(null);
+  const { currentlyPlayingSong, setCurrentlyPlayingSong, queue, setQueue, setCurrentIndex } = useMusic();
   const [songs, setSongs] = useState<any[]>([]); // Recently Played
   const [weeklySongs, setWeeklySongs] = useState<any[]>([]); // Weekly Top 15
   const [featuredAlbums, setFeaturedAlbums] = useState<any[]>([]); // State mới cho Featured Albums
+  const [featuredArtists, setFeaturedArtists] = useState<ArtistWithTotalViews[]>([]); // Featured Artists
+  const [allAlbums, setAllAlbums] = useState<any[]>([]); // Tất cả albums để tìm album của artist
+  const [newReleases, setNewReleases] = useState<any[]>([]); // New Releases
 
   useEffect(() => {
     const songID = localStorage.getItem("userId");
@@ -34,22 +34,139 @@ const Container = () => {
       .catch((err) => console.log("Lỗi fetch weekly songs:", err));
 
     // API Featured Albums (MỚI)
-    axios
-      .get("http://localhost:3000/albums") 
-      .then((res) => {
+    getAlbums()
+      .then((albums) => {
         // Lấy 6 album đầu tiên để hiển thị
-        setFeaturedAlbums(res.data.slice(0, 6)); 
+        setFeaturedAlbums(albums.slice(0, 6));
+        // Lưu tất cả albums để tìm album của artist
+        setAllAlbums(albums);
       })
       .catch((err) => console.log("Lỗi fetch albums:", err));
+
+    // API Featured Artists - Tính tổng lượt nghe và sắp xếp (xét từ thứ 2 đến hết chủ nhật)
+    const fetchFeaturedArtists = async () => {
+      try {
+        // Lấy tất cả artists
+        const artistsResponse = await getArtists(1, 100);
+        const artists = artistsResponse.data;
+
+        // Tính khoảng thời gian tuần hiện tại (thứ 2 đến chủ nhật)
+        const now = new Date();
+        const currentDay = now.getDay(); // 0 = Chủ nhật, 1 = Thứ 2, ...
+        const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1; // Số ngày từ thứ 2
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - daysFromMonday);
+        monday.setHours(0, 0, 0, 0);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+
+        // Tính tổng lượt nghe cho mỗi artist (chỉ tính songs được tạo trong tuần hiện tại)
+        const artistsWithViews: ArtistWithTotalViews[] = await Promise.all(
+          artists.map(async (artist) => {
+            try {
+              const songs = await getSongsByArtistId(artist.id);
+              // Lọc songs được tạo trong tuần hiện tại (thứ 2 đến chủ nhật)
+              const songsInWeek = songs.filter((song) => {
+                if (!song.createdAt) return false;
+                const songDate = new Date(song.createdAt);
+                return songDate >= monday && songDate <= sunday;
+              });
+              // Tính tổng views của các songs trong tuần
+              const totalViews = songsInWeek.reduce((sum, song) => sum + (song.views || 0), 0);
+              return { ...artist, totalViews };
+            } catch (error) {
+              console.error(`Error fetching songs for artist ${artist.id}:`, error);
+              return { ...artist, totalViews: 0 };
+            }
+          })
+        );
+
+        // Sắp xếp theo tổng lượt nghe giảm dần và lấy 6 artists đầu tiên
+        const sortedArtists = artistsWithViews
+          .sort((a, b) => b.totalViews - a.totalViews)
+          .slice(0, 6);
+
+        setFeaturedArtists(sortedArtists);
+      } catch (error) {
+        console.error("Lỗi fetch featured artists:", error);
+      }
+    };
+
+    fetchFeaturedArtists();
+
+    // API New Releases - Lấy các bài hát mới nhất
+    const fetchNewReleases = async () => {
+      try {
+        const releases = await getNewReleases(4); // Lấy 4 bài mới nhất
+        setNewReleases(releases);
+      } catch (error) {
+        console.error("Lỗi fetch new releases:", error);
+      }
+    };
+
+    fetchNewReleases();
   }, []);
 
   const handleSongClick = (songData: any) => {
-    setCurrentlyPlayingSong({
+    const song: Song = {
       title: songData.title,
       artist: songData.description || songData.artist || "Unknown Artist",
-      image: songData.coverImage,
-      audioUrl: songData.fileUrl,
-    });
+      image: songData.coverImage || songData.image,
+      audioUrl: songData.fileUrl || songData.audioUrl,
+      id: songData.id,
+    };
+    
+    // Tạo queue từ tất cả danh sách bài hát có sẵn
+    const allSongs: Song[] = [
+      ...songs.map((s: any) => ({
+        title: s.title,
+        artist: s.description || s.artist || "Unknown Artist",
+        image: s.coverImage || './slide/Song1.jpg',
+        audioUrl: s.fileUrl || '',
+        id: s.id,
+      })),
+      ...weeklySongs.map((s: any) => ({
+        title: s.title,
+        artist: s.description || s.artist?.artistName || "Unknown Artist",
+        image: s.coverImage || './slide/Song1.jpg',
+        audioUrl: s.fileUrl || '',
+        id: s.id,
+      })),
+      ...newReleases.map((s: any) => ({
+        title: s.title,
+        artist: s.artist?.artistName || s.artist || "Unknown Artist",
+        image: s.coverImage || './slide/Song1.jpg',
+        audioUrl: s.fileUrl || '',
+        id: s.id,
+      })),
+    ].filter(s => s.audioUrl); // Chỉ lấy bài có audioUrl
+
+    // Đảm bảo có ít nhất bài hát hiện tại trong queue
+    if (allSongs.length === 0) {
+      // Nếu không có bài nào trong danh sách, tạo queue chỉ với bài hiện tại
+      setQueue([song]);
+      setCurrentIndex(0);
+      setCurrentlyPlayingSong(song);
+      return;
+    }
+
+    // Tìm index của bài hát được click
+    const index = allSongs.findIndex(s => 
+      s.audioUrl === song.audioUrl || (s.id && song.id && s.id === song.id)
+    );
+
+    if (index !== -1) {
+      setQueue(allSongs);
+      setCurrentIndex(index);
+      setCurrentlyPlayingSong(song);
+    } else {
+      // Nếu không tìm thấy trong queue, thêm vào và phát
+      const newQueue = [...allSongs, song];
+      setQueue(newQueue);
+      setCurrentIndex(newQueue.length - 1);
+      setCurrentlyPlayingSong(song);
+    }
   };
 
   // Hàm render item cho Weekly Top 15
@@ -150,7 +267,7 @@ const Container = () => {
           </div>
         </div>
 
-        {/* === FEATURED ARTISTS (GIỮ NGUYÊN) === */}
+        {/* === FEATURED ARTISTS (ĐÃ GHÉP API) === */}
         <div className="mt-[64px]">
           <div className="flex justify-between">
             <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold ">
@@ -163,30 +280,64 @@ const Container = () => {
             <button className="text-white">
               <FaChevronLeft />
             </button>
-            <div className="text-white w-[175px] h-[217px]">
-              <img className="rounded-[10px] mb-[19.18px] " src="./slide/product7.jpg" alt="" />
-              <h3><a href="">Best Of Ava Cornish</a></h3>
-            </div>
-            <div className="text-white w-[175px] h-[217px]">
-              <img className="rounded-[10px] mb-[19.18px]" src="./slide/product8.jpg" alt="" />
-              <h3><a href="">Until I Met You</a></h3>
-            </div>
-            <div className="text-white w-[175px] h-[217px]">
-              <img className="rounded-[10px] mb-[19.18px]" src="./slide/product9.jpg" alt="" />
-              <h3><a href="">Gimme Some Courage</a></h3>
-            </div>
-            <div className="text-white w-[175px] h-[217px]">
-              <img className="rounded-[10px] mb-[19.18px]" src="./slide/product10.jpg" alt="" />
-              <h3><a href="">Dark Alley Acoustic</a></h3>
-            </div>
-            <div className="text-white w-[175px] h-[217px]">
-              <img className="rounded-[10px] mb-[19.18px]" src="./slide/product11.jpg" alt="" />
-              <h3><a href="">Walking Promises</a></h3>
-            </div>
-            <div className="text-white w-[175px] h-[217px]">
-              <img className="rounded-[10px] mb-[19.18px]" src="./slide/Product12.jpg" alt="" />
-              <h3><a href="">Desired Games</a></h3>
-            </div>
+            {featuredArtists.length > 0 ? (
+              featuredArtists.map((artist) => {
+                // Tìm album đầu tiên của artist này từ tất cả albums
+                const artistAlbum = allAlbums.find(album => album.artistId === artist.id);
+                const displayImage = artistAlbum?.coverImage || artist.avatar || './slide/product7.jpg';
+                const displayTitle = artistAlbum?.title || `Best Of ${artist.artistName}`;
+                
+                return (
+                  <div 
+                    key={artist.id} 
+                    className="text-white w-[175px] h-[217px] cursor-pointer"
+                    onClick={() => {
+                      // Navigate đến trang artist detail
+                      window.location.href = `/artist/${artist.id}`;
+                    }}
+                  >
+                    <img 
+                      className="rounded-[10px] mb-[19.18px] w-full h-[175px] object-cover" 
+                      src={displayImage} 
+                      alt={artist.artistName}
+                      onError={(e) => {
+                        // Fallback nếu ảnh lỗi
+                        (e.target as HTMLImageElement).src = './slide/product7.jpg';
+                      }}
+                    />
+                    <h3><a href={`/artist/${artist.id}`}>{displayTitle}</a></h3>
+                  </div>
+                );
+              })
+            ) : (
+              // Hiển thị placeholder khi đang load
+              <>
+                <div className="text-white w-[175px] h-[217px]">
+                  <img className="rounded-[10px] mb-[19.18px] " src="./slide/product7.jpg" alt="" />
+                  <h3><a href="">Loading...</a></h3>
+                </div>
+                <div className="text-white w-[175px] h-[217px]">
+                  <img className="rounded-[10px] mb-[19.18px]" src="./slide/product8.jpg" alt="" />
+                  <h3><a href="">Loading...</a></h3>
+                </div>
+                <div className="text-white w-[175px] h-[217px]">
+                  <img className="rounded-[10px] mb-[19.18px]" src="./slide/product9.jpg" alt="" />
+                  <h3><a href="">Loading...</a></h3>
+                </div>
+                <div className="text-white w-[175px] h-[217px]">
+                  <img className="rounded-[10px] mb-[19.18px]" src="./slide/product10.jpg" alt="" />
+                  <h3><a href="">Loading...</a></h3>
+                </div>
+                <div className="text-white w-[175px] h-[217px]">
+                  <img className="rounded-[10px] mb-[19.18px]" src="./slide/product11.jpg" alt="" />
+                  <h3><a href="">Loading...</a></h3>
+                </div>
+                <div className="text-white w-[175px] h-[217px]">
+                  <img className="rounded-[10px] mb-[19.18px]" src="./slide/Product12.jpg" alt="" />
+                  <h3><a href="">Loading...</a></h3>
+                </div>
+              </>
+            )}
             <button className="text-white">
               <FaChevronRight />
             </button>
@@ -228,58 +379,83 @@ const Container = () => {
               </div>
 
               <div className="flex mt-[16px]">
-                <div
-                  className="w-[267px] h-[50px] ml-[10px] flex text-white cursor-pointer hover:bg-[#252B4D] rounded-md p-1"
-                  onClick={() =>
-                    handleSongClick({
-                      title: "Dark Alley Acoustic",
-                      artist: "Ava Cornish",
-                      image: "./slide/Song1.jpg",
-                    })
-                  }
-                >
-                  <img src="./slide/Song1.jpg" alt="" />
-                  <span className="mr-[6.67px] text-[14px] ml-[20px]">
-                    <h3 className="w-[126px] h-[20px] mb-[6.8px]">
-                      Dark Alley Acoustic
-                    </h3>
-                    <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                  </span>
-                  <h3 className="text-[15px] ">5:10</h3>
-                </div>
-
-                <div className="w-[267px] h-[50px] ml-[40px] flex text-white cursor-pointer hover:bg-[#252B4D] rounded-md p-1">
-                  <img src="./slide/Song2.jpg" alt="" />
-                  <span className="mr-[6.67px] text-[14px] ml-[20px] ">
-                    <h3 className="w-[126px] h-[20px] mb-[6.8px]">
-                      Dark Alley Acoustic
-                    </h3>
-                    <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                  </span>
-                  <h3 className="text-[15px] ">5:10</h3>
-                </div>
-
-                <div className="w-[267px] h-[50px] ml-[40px] flex text-white cursor-pointer hover:bg-[#252B4D] rounded-md p-1">
-                  <img src="./slide/Song3.jpg" alt="" />
-                  <span className="mr-[6.67px] text-[14px] ml-[20px]">
-                    <h3 className="w-[126px] h-[20px] mb-[6.8px]">
-                      Dark Alley Acoustic
-                    </h3>
-                    <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                  </span>
-                  <h3 className="text-[15px] ">5:10</h3>
-                </div>
-
-                <div className="w-[267px] h-[50px] ml-[40px] flex text-white cursor-pointer hover:bg-[#252B4D] rounded-md p-1">
-                  <img src="./slide/Song4.jpg" alt="" />
-                  <span className="mr-[6.67px] text-[14px] ml-[20px]">
-                    <h3 className="w-[126px] h-[20px] mb-[6.8px]">
-                      Dark Alley Acoustic
-                    </h3>
-                    <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                  </span>
-                  <h3 className="text-[15px] ">5:10</h3>
-                </div>
+                {newReleases.length > 0 ? (
+                  newReleases.map((song, index) => {
+                    const songImage = song.coverImage || './slide/Song1.jpg';
+                    const songTitle = song.title || 'Unknown';
+                    const songArtist = song.artist?.artistName || song.artist || 'Unknown Artist';
+                    const songDuration = song.duration || '0:00';
+                    
+                    return (
+                      <div
+                        key={song.id || index}
+                        className={`w-[267px] h-[50px] ${index === 0 ? 'ml-[10px]' : 'ml-[40px]'} flex text-white cursor-pointer hover:bg-[#252B4D] rounded-md p-1`}
+                        onClick={() =>
+                          handleSongClick({
+                            title: songTitle,
+                            artist: songArtist,
+                            image: songImage,
+                            coverImage: songImage,
+                            fileUrl: song.fileUrl,
+                            audioUrl: song.fileUrl,
+                          })
+                        }
+                      >
+                        <img 
+                          src={songImage} 
+                          alt={songTitle}
+                          className="w-[50px] h-[50px] object-cover rounded"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = './slide/Song1.jpg';
+                          }}
+                        />
+                        <span className="mr-[6.67px] text-[14px] ml-[20px]">
+                          <h3 className="w-[126px] h-[20px] mb-[6.8px] truncate">
+                            {songTitle}
+                          </h3>
+                          <h3 className="w-[78px] h-[20px] truncate">{songArtist}</h3>
+                        </span>
+                        <h3 className="text-[15px]">{songDuration}</h3>
+                      </div>
+                    );
+                  })
+                ) : (
+                  // Hiển thị placeholder khi đang load
+                  <>
+                    <div className="w-[267px] h-[50px] ml-[10px] flex text-white cursor-pointer hover:bg-[#252B4D] rounded-md p-1">
+                      <img src="./slide/Song1.jpg" alt="" />
+                      <span className="mr-[6.67px] text-[14px] ml-[20px]">
+                        <h3 className="w-[126px] h-[20px] mb-[6.8px]">Loading...</h3>
+                        <h3 className="w-[78px] h-[20px]">Loading...</h3>
+                      </span>
+                      <h3 className="text-[15px]">0:00</h3>
+                    </div>
+                    <div className="w-[267px] h-[50px] ml-[40px] flex text-white cursor-pointer hover:bg-[#252B4D] rounded-md p-1">
+                      <img src="./slide/Song2.jpg" alt="" />
+                      <span className="mr-[6.67px] text-[14px] ml-[20px]">
+                        <h3 className="w-[126px] h-[20px] mb-[6.8px]">Loading...</h3>
+                        <h3 className="w-[78px] h-[20px]">Loading...</h3>
+                      </span>
+                      <h3 className="text-[15px]">0:00</h3>
+                    </div>
+                    <div className="w-[267px] h-[50px] ml-[40px] flex text-white cursor-pointer hover:bg-[#252B4D] rounded-md p-1">
+                      <img src="./slide/Song3.jpg" alt="" />
+                      <span className="mr-[6.67px] text-[14px] ml-[20px]">
+                        <h3 className="w-[126px] h-[20px] mb-[6.8px]">Loading...</h3>
+                        <h3 className="w-[78px] h-[20px]">Loading...</h3>
+                      </span>
+                      <h3 className="text-[15px]">0:00</h3>
+                    </div>
+                    <div className="w-[267px] h-[50px] ml-[40px] flex text-white cursor-pointer hover:bg-[#252B4D] rounded-md p-1">
+                      <img src="./slide/Song4.jpg" alt="" />
+                      <span className="mr-[6.67px] text-[14px] ml-[20px]">
+                        <h3 className="w-[126px] h-[20px] mb-[6.8px]">Loading...</h3>
+                        <h3 className="w-[78px] h-[20px]">Loading...</h3>
+                      </span>
+                      <h3 className="text-[15px]">0:00</h3>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

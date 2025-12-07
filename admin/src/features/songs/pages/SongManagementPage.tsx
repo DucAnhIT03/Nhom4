@@ -2,12 +2,18 @@ import { useState, useEffect } from 'react';
 import { Search, Trash2, Edit, Plus } from 'lucide-react';
 import { getSongs, deleteSong } from '@/services/song.service';
 import type { Song } from '@/services/song.service';
+import { getGenresOfSong } from '@/services/genre.service';
+import type { Genre } from '@/services/genre.service';
 import ConfirmModal from '../../artists/components/ConfirmModal';
 import SongModal from '../components/SongModal';
 import './SongManagementPage.css';
 
+interface SongWithGenres extends Song {
+  genres?: Genre[];
+}
+
 const SongManagementPage = () => {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<SongWithGenres[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmModal, setConfirmModal] = useState<{
@@ -33,7 +39,19 @@ const SongManagementPage = () => {
     setLoading(true);
     try {
       const data = await getSongs();
-      setSongs(data || []);
+      // Load genres cho mỗi bài hát
+      const songsWithGenres = await Promise.all(
+        (data || []).map(async (song) => {
+          try {
+            const genres = await getGenresOfSong(song.id);
+            return { ...song, genres };
+          } catch (error) {
+            console.error(`Error loading genres for song ${song.id}:`, error);
+            return { ...song, genres: [] };
+          }
+        })
+      );
+      setSongs(songsWithGenres);
     } catch (error) {
       console.error('Error loading songs:', error);
     } finally {
@@ -131,6 +149,7 @@ const SongManagementPage = () => {
                 <th>ID</th>
                 <th>Tên bài hát</th>
                 <th>Nghệ sĩ</th>
+                <th>Thể loại</th>
                 <th>Lượt nghe</th>
                 <th>Ngày tạo</th>
                 <th>Thao tác</th>
@@ -139,7 +158,7 @@ const SongManagementPage = () => {
             <tbody>
               {filteredSongs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="empty-state">
+                  <td colSpan={7} className="empty-state">
                     {searchTerm ? 'Không tìm thấy kết quả' : 'Không có dữ liệu'}
                   </td>
                 </tr>
@@ -155,6 +174,28 @@ const SongManagementPage = () => {
                     <td>
                       {song.artist ? (
                         <span>{song.artist.artistName}</span>
+                      ) : (
+                        <span className="text-muted">-</span>
+                      )}
+                    </td>
+                    <td>
+                      {song.genres && song.genres.length > 0 ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          {song.genres.map((genre) => (
+                            <span
+                              key={genre.id}
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                backgroundColor: 'rgba(59, 200, 231, 0.2)',
+                                color: '#3BC8E7',
+                                fontSize: '12px',
+                              }}
+                            >
+                              {genre.genreName}
+                            </span>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-muted">-</span>
                       )}

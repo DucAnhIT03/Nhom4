@@ -1,4 +1,5 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { User } from "./user.schema";
 
 /**
  * artists
@@ -23,6 +24,13 @@ export class Artist {
 
   @Column({ type: "int", nullable: true })
   age?: number;
+
+  @Column({ name: "user_id", type: "int", nullable: true, unique: true })
+  userId?: number;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "user_id" })
+  user?: User;
 
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;

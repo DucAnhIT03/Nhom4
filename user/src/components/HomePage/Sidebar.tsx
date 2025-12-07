@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"; // Thêm useEffect để lấy role khi component mount
+import { useState, useEffect, useCallback } from "react"; // Thêm useEffect và useCallback
 import { useNavigate } from "react-router-dom";
 import {
   FaHome,
@@ -11,7 +11,7 @@ import {
   FaClock,
   FaChevronLeft,
   FaChevronRight,
-  FaTachometerAlt, // 1. Import icon cho Dashboard
+  FaFolderOpen, // Icon cho "Đăng tải của tôi"
 } from "react-icons/fa";
 
 const Sidebar = () => {
@@ -21,13 +21,64 @@ const Sidebar = () => {
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
-  // 2. Giả lập lấy role từ localStorage (hoặc bạn thay bằng Context/Redux)
+  // 2. Lấy role từ localStorage và refresh từ API
+  // Hàm load role từ API - sử dụng useCallback để tránh re-create function
+  const loadRoleFromAPI = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setUserRole("user");
+      return;
+    }
+
+    try {
+      const { getCurrentUser } = await import("../../services/auth.service");
+      const userProfile = await getCurrentUser();
+      if (userProfile.role) {
+        // Normalize role: loại bỏ "ROLE_" prefix và chuyển về lowercase
+        const normalizedRole = userProfile.role.replace(/^ROLE_/i, "").toLowerCase();
+        setUserRole(normalizedRole);
+        localStorage.setItem("role", normalizedRole);
+      }
+    } catch (err) {
+      console.warn("Không thể lấy role từ API:", err);
+      // Giữ nguyên role từ localStorage nếu API lỗi
+      const storedRole = localStorage.getItem("role");
+      if (storedRole) {
+        const normalizedRole = storedRole.replace(/^ROLE_/i, "").toLowerCase();
+        setUserRole(normalizedRole);
+      }
+    }
+  }, []); // Empty dependency array vì function không phụ thuộc vào props/state
+
   useEffect(() => {
-    // Ví dụ: Lấy item 'role' đã lưu khi đăng nhập
-    const role = localStorage.getItem("role"); 
-    // Nếu không có thì mặc định là user, nếu có thì set vào state
-    if (role) setUserRole(role);
-  }, []);
+    // Lấy role từ localStorage trước (để hiển thị nhanh)
+    const storedRole = localStorage.getItem("role");
+    if (storedRole) {
+      // Normalize role: loại bỏ "ROLE_" prefix và chuyển về lowercase
+      const normalizedRole = storedRole.replace(/^ROLE_/i, "").toLowerCase();
+      setUserRole(normalizedRole);
+    }
+
+    // Refresh role từ API ngay lập tức
+    loadRoleFromAPI();
+
+    // Tự động refresh role mỗi 30 giây để cập nhật khi admin gán quyền
+    const intervalId = setInterval(() => {
+      loadRoleFromAPI();
+    }, 30000); // 30 giây
+
+    // Refresh role khi user quay lại tab/window (focus)
+    const handleFocus = () => {
+      loadRoleFromAPI();
+    };
+    window.addEventListener("focus", handleFocus);
+
+    // Cleanup
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [loadRoleFromAPI]); // Thêm loadRoleFromAPI vào dependency array
 
   const menuItems = [
     { icon: <FaHome />, label: "Discover", path: "/" },
@@ -44,14 +95,17 @@ const Sidebar = () => {
   ];
 
   // 3. Tạo danh sách items cuối cùng dựa trên role
-  // Nếu là artist, chèn thêm nút Dashboard vào trước hoặc sau các mục khác
+  // Nếu là artist, chèn thêm nút "Đăng tải của tôi"
   let finalMenuItems = [...menuItems];
   
-  if (userRole === "artist") {
+  // Normalize userRole để đảm bảo so sánh đúng
+  const normalizedRole = userRole?.replace(/^ROLE_/i, "").toLowerCase();
+  
+  if (normalizedRole === "artist") {
     finalMenuItems.push({
-      icon: <FaTachometerAlt className="text-yellow-400" />, // Highlight icon một chút
-      label: "Artist Dashboard",
-      path: "/artist/dashboard",
+      icon: <FaFolderOpen className="text-cyan-400" />, // Icon cho "Đăng tải của tôi"
+      label: "Đăng tải của tôi",
+      path: "/artist/dashboard?tab=my-content", // Link trực tiếp đến tab "Đăng tải của tôi"
     });
   }
 
@@ -92,9 +146,7 @@ const Sidebar = () => {
             key={index}
             onClick={() => navigate(item.path)}
             // Thêm điều kiện logic style: Nếu là Dashboard thì background khác một chút để nổi bật
-            className={`flex items-center gap-3 w-full px-5 py-2 text-white transition-colors duration-200 
-              ${item.label === "Artist Dashboard" ? "hover:bg-[#E52C2C] bg-[#3a4063]" : "hover:bg-[#2CC8E5]"}
-            `}
+            className="flex items-center gap-3 w-full px-5 py-2 text-white transition-colors duration-200 hover:bg-[#2CC8E5]"
           >
             <span className="text-lg">{item.icon}</span>
             {isOpen && <span className="text-sm whitespace-nowrap">{item.label}</span>}

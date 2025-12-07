@@ -30,6 +30,12 @@ export class User {
   @Column({ name: "profile_image", length: 255, nullable: true })
   profileImage?: string;
 
+  @Column({ type: "int", nullable: true })
+  age?: number;
+
+  @Column({ length: 100, nullable: true })
+  nationality?: string;
+
   @Column({ type: "longtext", nullable: true })
   bio?: string;
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from "@nestjs/common";
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Like } from "typeorm";
 import * as bcrypt from "bcryptjs";
@@ -10,6 +10,7 @@ import { UpdateUserDto } from "./dtos/request/update-user.dto";
 import { QueryUserDto } from "./dtos/request/query-user.dto";
 import { UpdateUserStatusDto } from "./dtos/request/update-user-status.dto";
 import { ChangePasswordDto } from "./dtos/request/change-password.dto";
+import { UpdateUserRolesDto } from "./dtos/request/update-user-roles.dto";
 import { UserResponseDto } from "./dtos/response/user-response.dto";
 
 @Injectable()
@@ -207,6 +208,57 @@ export class UserService {
 
     await this.userRepository.remove(user);
     return { message: "User deleted successfully" };
+  }
+
+  async updateUserRoles(userId: number, updateRolesDto: UpdateUserRolesDto, currentAdminId: number) {
+    // Kiểm tra admin không thể gán quyền cho chính mình
+    if (userId === currentAdminId) {
+      throw new ForbiddenException("Bạn không thể gán quyền cho chính mình");
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    // Validate các roles tồn tại
+    const roles = await Promise.all(
+      updateRolesDto.roles.map(async (roleName) => {
+        const role = await this.roleRepository.findOne({
+          where: { roleName },
+        });
+        if (!role) {
+          throw new BadRequestException(`Role ${roleName} không tồn tại trong hệ thống`);
+        }
+        return role;
+      }),
+    );
+
+    // Xóa tất cả roles hiện tại của user
+    await this.userRoleRepository.delete({ userId });
+
+    // Gán các roles mới
+    const userRoles = roles.map((role) =>
+      this.userRoleRepository.create({
+        userId,
+        roleId: role.id,
+      }),
+    );
+
+    await this.userRoleRepository.save(userRoles);
+
+    return this.findOne(userId);
+  }
+
+  async getAllRoles() {
+    const roles = await this.roleRepository.find({
+      order: { id: "ASC" },
+    });
+    return roles.map((role) => ({
+      id: role.id,
+      roleName: role.roleName,
+      displayName: role.roleName.replace("ROLE_", ""),
+    }));
   }
 }
 

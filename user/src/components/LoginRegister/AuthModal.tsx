@@ -100,10 +100,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
         localStorage.setItem("token", response.accessToken);
 
         // Lấy thông tin user để lưu role
+        let userRole = "user";
         try {
           const userProfile = await getCurrentUser();
           if (userProfile.role) {
-            localStorage.setItem("role", userProfile.role);
+            // Normalize role: loại bỏ "ROLE_" prefix và chuyển về lowercase
+            userRole = userProfile.role.replace(/^ROLE_/i, "").toLowerCase();
+            localStorage.setItem("role", userRole);
           }
           if (userProfile.id) {
             localStorage.setItem("userId", userProfile.id.toString());
@@ -122,9 +125,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
         
         setMessage("✅ Xác thực thành công! Đang đăng nhập...");
         
-        // Tự động đăng nhập sau khi verify
+        // Tự động đăng nhập sau khi verify, điều hướng dựa trên role
         setTimeout(() => {
-          window.location.href = "/";
+          if (userRole === "artist") {
+            window.location.href = "/artist/dashboard";
+          } else {
+            window.location.href = "/";
+          }
         }, 1000);
       }
 
@@ -139,10 +146,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
         localStorage.setItem("token", response.accessToken);
 
         // Lấy thông tin user để lưu role
+        let userRole = "user";
         try {
           const userProfile = await getCurrentUser();
           if (userProfile.role) {
-            localStorage.setItem("role", userProfile.role);
+            // Normalize role: loại bỏ "ROLE_" prefix và chuyển về lowercase
+            userRole = userProfile.role.replace(/^ROLE_/i, "").toLowerCase();
+            localStorage.setItem("role", userRole);
+          }
+          if (userProfile.id) {
+            localStorage.setItem("userId", userProfile.id.toString());
+          }
+          if (userProfile.email) {
+            localStorage.setItem("email", userProfile.email);
           }
           if (userProfile.firstName && userProfile.lastName) {
             localStorage.setItem("userName", `${userProfile.firstName} ${userProfile.lastName}`);
@@ -155,9 +171,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
 
         setMessage("✅ Đăng nhập thành công!");
 
-        // Điều hướng về trang chủ
+        // Điều hướng dựa trên role
         setTimeout(() => {
-          window.location.href = "/";
+          if (userRole === "artist") {
+            window.location.href = "/artist/dashboard";
+          } else {
+            window.location.href = "/";
+          }
         }, 800);
       }
     } catch (err: any) {

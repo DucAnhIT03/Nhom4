@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) NOT NULL,
   password VARCHAR(255) NOT NULL,
   profile_image VARCHAR(255) NULL,
+  age INT NULL,
+  nationality VARCHAR(100) NULL,
   bio LONGTEXT NULL,
   status ENUM('VERIFY','ACTIVE','BLOCKED') NOT NULL DEFAULT 'VERIFY',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -70,9 +72,13 @@ CREATE TABLE IF NOT EXISTS artists (
   avatar VARCHAR(255) NULL,
   nationality VARCHAR(100) NULL,
   age INT NULL,
+  user_id INT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_artist_name (artist_name)
+  INDEX idx_artist_name (artist_name),
+  INDEX idx_user_id (user_id),
+  UNIQUE KEY uk_user_id (user_id),
+  CONSTRAINT fk_artist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- =========================
@@ -103,12 +109,15 @@ CREATE TABLE IF NOT EXISTS songs (
   duration TIME NULL,
   artist_id INT NOT NULL,
   album_id INT NULL,
+  genre_id INT NULL,
+  cover_image VARCHAR(255) NULL,
   file_url VARCHAR(255) NULL,
   views INT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_song_artist FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE CASCADE,
-  CONSTRAINT fk_song_album FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE
+  CONSTRAINT fk_song_album FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE,
+  CONSTRAINT fk_song_genre FOREIGN KEY (genre_id) REFERENCES genres(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- =========================
@@ -244,14 +253,39 @@ CREATE TABLE IF NOT EXISTS payments (
   CONSTRAINT fk_payment_plan FOREIGN KEY (plan_id) REFERENCES subscription_plan(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- =========================
+-- banners
+-- =========================
+CREATE TABLE IF NOT EXISTS banners (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  image_url VARCHAR(255) NOT NULL,
+  content LONGTEXT NULL,
+  song_id INT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_is_active (is_active),
+  INDEX idx_song_id (song_id),
+  CONSTRAINT fk_banner_song FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 -- ============================================================
 -- Seed tài khoản admin mặc định (dùng cho môi trường dev/test)
 -- ============================================================
 
--- Thêm role ADMIN nếu bảng roles đang trống
+-- Thêm các roles nếu chưa tồn tại
 INSERT INTO roles (role_name)
 SELECT 'ROLE_ADMIN'
 WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'ROLE_ADMIN');
+
+INSERT INTO roles (role_name)
+SELECT 'ROLE_USER'
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'ROLE_USER');
+
+INSERT INTO roles (role_name)
+SELECT 'ROLE_ARTIST'
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'ROLE_ARTIST');
 
 -- Thêm user admin mặc định nếu chưa tồn tại
 INSERT INTO users (first_name, last_name, email, password, profile_image, bio, status)

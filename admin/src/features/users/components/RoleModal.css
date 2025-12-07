@@ -1,0 +1,68 @@
+.role-modal {
+  max-width: 500px;
+}
+
+.role-modal-user-info {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.role-modal-user-info p {
+  margin: 8px 0;
+  color: #e0e0e0;
+  font-size: 14px;
+}
+
+.role-modal-user-info strong {
+  color: #fff;
+  margin-right: 8px;
+}
+
+.roles-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.role-checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.role-checkbox-label:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.role-checkbox {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.role-checkbox-text {
+  color: #e0e0e0;
+  font-size: 14px;
+  user-select: none;
+}
+
+.role-checkbox-label:has(.role-checkbox:checked) {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+}
+
+.role-checkbox-label:has(.role-checkbox:checked) .role-checkbox-text {
+  color: #fff;
+  font-weight: 500;
+}
+
+

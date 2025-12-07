@@ -246,6 +246,15 @@
   background: rgba(59, 200, 231, 0.3);
 }
 
+.btn-role {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+.btn-role:hover {
+  background: rgba(139, 92, 246, 0.3);
+}
+
 .btn-block {
   background: rgba(237, 137, 54, 0.2);
   color: #ed8936;

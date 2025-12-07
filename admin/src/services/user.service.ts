@@ -65,3 +65,23 @@ export const toggleUserStatus = async (id: number, status: 'ACTIVE' | 'BLOCKED')
   return response.data;
 };
 
+export interface Role {
+  id: number;
+  roleName: string;
+  displayName: string;
+}
+
+export interface UpdateUserRolesDto {
+  roles: string[];
+}
+
+export const getAllRoles = async () => {
+  const response = await axios.get<Role[]>('/users/roles/all');
+  return response.data;
+};
+
+export const updateUserRoles = async (id: number, roles: string[]) => {
+  const response = await axios.put<User>(`/users/${id}/roles`, { roles });
+  return response.data;
+};
+

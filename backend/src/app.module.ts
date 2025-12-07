@@ -17,6 +17,7 @@ import { PaymentModule } from "./modules/payment/payment.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { UserModule } from "./modules/user/user.module";
 import { ArtistModule } from "./modules/artist/artist.module";
+import { BannerModule } from "./modules/banner/banner.module";
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ArtistModule } from "./modules/artist/artist.module";
     DashboardModule,
     UserModule,
     ArtistModule,
+    BannerModule,
   ],
 })
 export class AppModule {}

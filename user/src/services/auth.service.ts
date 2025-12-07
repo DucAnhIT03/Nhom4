@@ -2,6 +2,27 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// Tạo axios instance với interceptor để xử lý 401 errors
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor để xử lý lỗi 401 (Unauthorized)
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && error.config.url !== '/auth/login' && error.config.url !== '/auth/register' && error.config.url !== '/auth/verify-otp') {
+      // Token không hợp lệ hoặc đã hết hạn, xóa token và redirect về trang đăng nhập
+      localStorage.clear();
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
+
 export interface RegisterDto {
   firstName: string;
   lastName: string;
@@ -32,17 +53,17 @@ export interface RegisterResponse {
 }
 
 export const register = async (data: RegisterDto): Promise<RegisterResponse> => {
-  const response = await axios.post<RegisterResponse>(`${API_BASE_URL}/auth/register`, data);
+  const response = await axiosInstance.post<RegisterResponse>('/auth/register', data);
   return response.data;
 };
 
 export const verifyOtp = async (data: VerifyOtpDto): Promise<LoginResponse> => {
-  const response = await axios.post<LoginResponse>(`${API_BASE_URL}/auth/verify-otp`, data);
+  const response = await axiosInstance.post<LoginResponse>('/auth/verify-otp', data);
   return response.data;
 };
 
 export const login = async (data: LoginDto): Promise<LoginResponse> => {
-  const response = await axios.post<LoginResponse>(`${API_BASE_URL}/auth/login`, data);
+  const response = await axiosInstance.post<LoginResponse>('/auth/login', data);
   return response.data;
 };
 
@@ -51,12 +72,20 @@ export interface UserProfile {
   email: string;
   firstName?: string;
   lastName?: string;
+  age?: number;
+  nationality?: string;
   role?: string;
 }
 
 export const getCurrentUser = async (): Promise<UserProfile> => {
   const token = localStorage.getItem('token');
-  const response = await axios.get<UserProfile>(`${API_BASE_URL}/auth/me`, {
+  if (!token) {
+    // Nếu không có token, redirect về trang đăng nhập
+    localStorage.clear();
+    window.location.href = "/";
+    throw new Error('No token found');
+  }
+  const response = await axiosInstance.get<UserProfile>('/auth/me', {
     headers: {
       Authorization: `Bearer ${token}`,
     },

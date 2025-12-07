@@ -12,6 +12,7 @@ import { User, UserStatus } from "../../shared/schemas/user.schema";
 import { Role, RoleName } from "../../shared/schemas/role.schema";
 import { UserRole } from "../../shared/schemas/user-role.schema";
 import { Otp } from "../../shared/schemas/otp.schema";
+import { Artist } from "../../shared/schemas/artist.schema";
 
 @Injectable()
 export class AuthService {
@@ -24,6 +25,8 @@ export class AuthService {
     private readonly userRoleRepository: Repository<UserRole>,
     @InjectRepository(Otp)
     private readonly otpRepository: Repository<Otp>,
+    @InjectRepository(Artist)
+    private readonly artistRepository: Repository<Artist>,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
   ) {}
@@ -158,6 +161,34 @@ export class AuthService {
     return { accessToken };
   }
 
+  async artistLogin(dto: LoginDto): Promise<{ accessToken: string }> {
+    const user = await this.validateUser(dto.email, dto.password);
+    
+    // Kiểm tra user có role ARTIST không
+    const artistRole = await this.roleRepository.findOne({
+      where: { roleName: RoleName.ARTIST },
+    });
+
+    if (!artistRole) {
+      throw new UnauthorizedException("Artist role not found in system.");
+    }
+
+    const userRole = await this.userRoleRepository.findOne({
+      where: {
+        userId: user.id,
+        roleId: artistRole.id,
+      },
+    });
+
+    if (!userRole) {
+      throw new UnauthorizedException("Access denied. Artist role required.");
+    }
+
+    const payload = { sub: user.id, email: user.email };
+    const accessToken = await this.jwtService.signAsync(payload);
+    return { accessToken };
+  }
+
   async verifyOtp(dto: VerifyOtpDto): Promise<{ accessToken: string }> {
     const email = dto.email.toLowerCase();
     
@@ -232,6 +263,8 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       profileImage: user.profileImage,
+      age: user.age,
+      nationality: user.nationality,
       role: primaryRole,
       roles: roles,
     };
@@ -240,6 +273,85 @@ export class AuthService {
   async verifyToken(token: string): Promise<{ id: number; email: string }> {
     const payload = await this.jwtService.verifyAsync<{ sub: number; email: string }>(token);
     return { id: payload.sub, email: payload.email };
+  }
+
+  async updateProfile(userId: number, updateData: { firstName?: string; lastName?: string; email?: string; profileImage?: string; age?: number; nationality?: string }): Promise<any> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("User not found");
+    }
+
+    // Kiểm tra email trùng lặp nếu có thay đổi email
+    if (updateData.email && updateData.email !== user.email) {
+      const email = updateData.email.toLowerCase().trim();
+      const existing = await this.userRepository.findOne({ where: { email } });
+      if (existing) {
+        throw new BadRequestException("Email đã được sử dụng. Vui lòng chọn email khác.");
+      }
+      updateData.email = email;
+    }
+
+    // Cập nhật thông tin
+    if (updateData.firstName) user.firstName = updateData.firstName;
+    if (updateData.lastName) user.lastName = updateData.lastName;
+    if (updateData.email) user.email = updateData.email;
+    if (updateData.profileImage !== undefined) user.profileImage = updateData.profileImage;
+    if (updateData.age !== undefined) user.age = updateData.age;
+    if (updateData.nationality !== undefined) user.nationality = updateData.nationality;
+
+    await this.userRepository.save(user);
+
+    // Kiểm tra xem user có role ARTIST không
+    const userRoles = await this.userRoleRepository.find({
+      where: { userId },
+    });
+
+    const hasArtistRole = await Promise.all(
+      userRoles.map(async (ur) => {
+        const role = await this.roleRepository.findOne({
+          where: { id: ur.roleId },
+        });
+        return role?.roleName === RoleName.ARTIST;
+      }),
+    );
+
+    const isArtist = hasArtistRole.some((hasRole) => hasRole === true);
+
+    // Chỉ đồng bộ thông tin với bảng artists nếu user có role ARTIST
+    if (isArtist) {
+      let artist = await this.artistRepository.findOne({
+        where: { userId },
+      });
+
+      // Nếu chưa có artist record, tạo mới
+      if (!artist) {
+        artist = this.artistRepository.create({
+          userId: user.id,
+          artistName: `${user.firstName} ${user.lastName}`,
+          bio: undefined,
+          avatar: user.profileImage || undefined,
+          age: user.age || undefined,
+          nationality: user.nationality || undefined,
+        });
+      } else {
+        // Cập nhật thông tin vào artist record hiện có
+        if (updateData.age !== undefined) artist.age = updateData.age;
+        if (updateData.nationality !== undefined) artist.nationality = updateData.nationality;
+        if (updateData.profileImage !== undefined) artist.avatar = updateData.profileImage;
+        // Cập nhật tên nghệ sĩ nếu có thay đổi firstName hoặc lastName
+        if (updateData.firstName || updateData.lastName) {
+          artist.artistName = `${user.firstName} ${user.lastName}`;
+        }
+      }
+
+      await this.artistRepository.save(artist);
+    }
+
+    // Trả về thông tin user đã cập nhật
+    return this.getUserProfile(userId);
   }
 }
 

@@ -1,6 +1,8 @@
+/* @refresh reset */
 import { StrictMode, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
+import { MusicProvider } from "./contexts/MusicContext";
 import "./index.css";
 
 // --- LAZY IMPORT PAGES ---
@@ -87,17 +89,29 @@ const router = createBrowserRouter([
     path: "artist/dashboard", 
     element: <ArtistDashboard />,
   },
+
+  // === REDIRECT ROUTES (Xử lý các route không tồn tại) ===
+  {
+    path: "dashboard/genres",
+    element: <Navigate to="/genres" replace />,
+  },
+  {
+    path: "*",
+    element: <Navigate to="/" replace />,
+  },
 ]);
 
 // --- RENDER APP ---
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Suspense fallback={
-      <div className="flex h-screen w-full items-center justify-center bg-[#171C36] text-white font-semibold text-lg">
-        Loading...
-      </div>
-    }>
-      <RouterProvider router={router} />
-    </Suspense>
+    <MusicProvider>
+      <Suspense fallback={
+        <div className="flex h-screen w-full items-center justify-center bg-[#171C36] text-white font-semibold text-lg">
+          Loading...
+        </div>
+      }>
+        <RouterProvider router={router} />
+      </Suspense>
+    </MusicProvider>
   </StrictMode>
 );

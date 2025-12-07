@@ -26,6 +26,12 @@ export class Song {
   @Column({ name: "album_id", type: "int", nullable: true })
   albumId?: number;
 
+  @Column({ name: "genre_id", type: "int", nullable: true })
+  genreId?: number;
+
+  @Column({ name: "cover_image", length: 255, nullable: true })
+  coverImage?: string;
+
   @Column({ name: "file_url", length: 255, nullable: true })
   fileUrl?: string;
 

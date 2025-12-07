@@ -12,6 +12,8 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
     firstName: "",
     lastName: "",
     email: "",
+    age: "",
+    nationality: "",
     profileImage: "",
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -32,6 +34,8 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
         firstName: user.firstName || "",
         lastName: user.lastName || "",
         email: user.email || "",
+        age: user.age?.toString() || "",
+        nationality: user.nationality || "",
         profileImage: (user as any).profileImage || "",
       });
       if ((user as any).profileImage) {
@@ -42,7 +46,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -111,13 +115,15 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
         }
       }
 
-      // Cập nhật thông tin user
+      // Cập nhật thông tin user (sử dụng endpoint /auth/me để user tự cập nhật profile)
       await axios.put(
-        `${API_BASE_URL}/users/${userId}`,
+        `${API_BASE_URL}/auth/me`,
         {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
+          age: formData.age ? parseInt(formData.age, 10) : undefined,
+          nationality: formData.nationality || undefined,
           profileImage: profileImageUrl,
         },
         {
@@ -233,6 +239,32 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
               onChange={handleChange}
               className="w-full px-4 py-2 rounded-lg bg-[#0f0f0f] border border-[#3BC8E7]/30 text-white focus:outline-none focus:border-[#3BC8E7]"
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-white text-sm mb-2">Tuổi</label>
+            <input
+              type="number"
+              name="age"
+              value={formData.age}
+              onChange={handleChange}
+              min="1"
+              max="120"
+              className="w-full px-4 py-2 rounded-lg bg-[#0f0f0f] border border-[#3BC8E7]/30 text-white focus:outline-none focus:border-[#3BC8E7]"
+              placeholder="Nhập tuổi của bạn"
+            />
+          </div>
+
+          <div>
+            <label className="block text-white text-sm mb-2">Quốc tịch</label>
+            <input
+              type="text"
+              name="nationality"
+              value={formData.nationality}
+              onChange={handleChange}
+              className="w-full px-4 py-2 rounded-lg bg-[#0f0f0f] border border-[#3BC8E7]/30 text-white focus:outline-none focus:border-[#3BC8E7]"
+              placeholder="Ví dụ: Việt Nam, USA, etc."
             />
           </div>
 

@@ -1,10 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  LayoutDashboard, Music, UploadCloud, Settings, LogOut, User,
+  LayoutDashboard, Music, UploadCloud, LogOut, User,
   PlayCircle, Disc, Search, Trash2, Edit, Plus,
   Image as ImageIcon, Calendar, CheckCircle2, X, Save, ListMusic,
-  Loader2, MoreVertical, Play, MinusCircle
+  Loader2, FolderOpen, Home, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat
 } from "lucide-react";
+import MyAlbumsTab from "../components/ArtistMyContent/MyAlbumsTab";
+import { 
+  getMyAlbums, 
+  createMyAlbum, 
+  updateMyAlbum, 
+  deleteMyAlbum,
+  getMySongs,
+  createMySong,
+  updateMySong,
+  deleteMySong,
+  type MyAlbum 
+} from "../services/artist-my-content.service";
+import { getGenres, type Genre } from "../services/genre.service";
 
 // --- CẤU HÌNH API & CLOUDINARY ---
 const API_BASE_URL = "http://localhost:3000"; 
@@ -14,14 +27,14 @@ const USE_MOCK_API = false;
 const CLOUDINARY_CLOUD_NAME = "dy9odkj0j"; // Cloud Name của bạn
 const CLOUDINARY_UPLOAD_PRESET = "music-app-upload"; // Upload Preset của bạn
 
-// --- MAPPING GENRE ---
-const GENRE_MAP: Record<string, number> = {
-    "Pop": 1,
-    "Ballad": 2,
-    "Rap/Hip-hop": 3,
-    "Indie": 4,
-    "R&B": 5
-};
+// --- MAPPING GENRE --- (Deprecated - sẽ dùng genres từ API)
+// const GENRE_MAP: Record<string, number> = {
+//     "Pop": 1,
+//     "Ballad": 2,
+//     "Rap/Hip-hop": 3,
+//     "Indie": 4,
+//     "R&B": 5
+// };
 
 // --- HELPER: UPLOAD LÊN CLOUDINARY ---
 const uploadToCloudinary = async (file: File): Promise<string> => {
@@ -69,11 +82,14 @@ interface Song {
 interface Album {
   id: number | string;
   title: string;
-  year: string;
+  year?: string;
+  releaseDate?: string;
   desc?: string;
   description?: string;
   cover: string;
   coverImage?: string;
+  type?: 'FREE' | 'PREMIUM';
+  backgroundMusic?: string;
 }
 
 interface Playlist {
@@ -161,9 +177,12 @@ const apiService = {
 // --- COMPONENT CHÍNH ---
 
 const ArtistDashboard = () => {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings">("dashboard");
+  // Đọc tab từ URL query parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabFromUrl = urlParams.get("tab") as "dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings" | "my-content" | null;
+  const [activeTab, setActiveTab] = useState<"dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings" | "my-content">(tabFromUrl || "dashboard");
   const [artistName, setArtistName] = useState("Artist");
-  const [avatar, setAvatar] = useState("");
+  const [avatar, setAvatar] = useState("https://cdn-icons-png.flaticon.com/512/3974/3974038.png");
 
   const [songs, setSongs] = useState<Song[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -183,6 +202,10 @@ const ArtistDashboard = () => {
   // [MỚI] State tìm kiếm bài hát trong Playlist
   const [songSearchQuery, setSongSearchQuery] = useState("");
 
+  // State cho danh sách genres từ API
+  const [genres, setGenres] = useState<Genre[]>([]);
+
+
   // Form States
   const [songForm, setSongForm] = useState({
     title: "", 
@@ -191,6 +214,7 @@ const ArtistDashboard = () => {
     genre: "Pop", 
     status: "Public", 
     albumId: "" as string | number,
+    duration: "",
     file: null as File | null, 
     fileName: "", 
     coverFile: null as File | null, 
@@ -198,7 +222,9 @@ const ArtistDashboard = () => {
   });
 
   const [albumForm, setAlbumForm] = useState({
-    title: "", year: "", desc: "", coverFile: null as File | null, coverPreview: "",
+    title: "", releaseDate: "", desc: "", type: "FREE" as "FREE" | "PREMIUM", 
+    coverFile: null as File | null, coverPreview: "",
+    backgroundMusicFile: null as File | null, backgroundMusicUrl: "",
     selectedSongIds: [] as (number | string)[]
   });
 
@@ -212,6 +238,7 @@ const ArtistDashboard = () => {
 
   // Refs
   const albumFileInputRef = useRef<HTMLInputElement>(null);
+  const albumBackgroundMusicInputRef = useRef<HTMLInputElement>(null);
   const playlistFileInputRef = useRef<HTMLInputElement>(null);
   const songFileInputRef = useRef<HTMLInputElement>(null);
   const songCoverInputRef = useRef<HTMLInputElement>(null);
@@ -219,10 +246,57 @@ const ArtistDashboard = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+        // Lấy danh sách genres từ API
+        const genresData = await getGenres();
+        setGenres(genresData);
+        
+        // Nếu có genres và songForm.genre chưa hợp lệ, set genre đầu tiên
+        if (genresData.length > 0 && !genresData.find(g => g.genreName === songForm.genre)) {
+            setSongForm(prev => ({ ...prev, genre: genresData[0].genreName }));
+        }
+
+        // Lấy albums từ API của nghệ sĩ
+        const albumsResponse = await getMyAlbums(1, 100);
+        const albumsData = albumsResponse.data.map((album: MyAlbum) => ({
+          id: album.id,
+          title: album.title,
+          releaseDate: album.releaseDate,
+          year: album.releaseDate ? new Date(album.releaseDate).getFullYear().toString() : '',
+          desc: '',
+          description: '',
+          cover: album.coverImage || '',
+          coverImage: album.coverImage || '',
+          type: album.type,
+        }));
+        
+        // Lấy songs từ API của nghệ sĩ
+        const songsResponse = await getMySongs(1, 100);
+        const songsData = songsResponse.data.map((song: any) => ({
+          id: song.id,
+          title: song.title,
+          artist: song.artist?.artistName || artistName,
+          plays: song.views || 0,
+          duration: song.duration || '0:00',
+          status: 'Public',
+          releaseDate: song.createdAt,
+          albumId: song.albumId || null,
+          genreId: song.genreId || null,
+          genre: genresData.find(g => g.id === song.genreId)?.genreName || 'Unknown',
+          coverImage: song.coverImage || '',
+          cover: song.coverImage || '',
+          audioUrl: song.fileUrl,
+          fileUrl: song.fileUrl,
+        }));
+        
         const data = await apiService.getDashboard();
-        setStats(data.stats);
-        setSongs(data.songs);
-        setAlbums(data.albums);
+        setStats([
+          { label: "Tổng lượt nghe", value: songsData.reduce((sum: number, s: any) => sum + (s.plays || 0), 0), icon: <PlayCircle size={24} />, color: "text-blue-400" },
+          { label: "Tổng bài hát", value: songsData.length, icon: <Music size={24} />, color: "text-purple-400" },
+          { label: "Tổng Album", value: albumsData.length, icon: <Disc size={24} />, color: "text-green-400" },
+          { label: "Playlist", value: data.playlists?.length || 0, icon: <ListMusic size={24} />, color: "text-pink-400" },
+        ]);
+        setSongs(songsData);
+        setAlbums(albumsData);
         setPlaylists(data.playlists || []);
     } catch (err) {
         setError("Không thể kết nối đến máy chủ.");
@@ -231,9 +305,63 @@ const ArtistDashboard = () => {
     }
   };
 
+  // Cập nhật activeTab khi URL thay đổi (khi component mount hoặc URL thay đổi)
   useEffect(() => {
-    setArtistName("Sơn Tùng M-TP (Demo)");
-    setAvatar(localStorage.getItem("avatar") || "https://cdn-icons-png.flaticon.com/512/3974/3974038.png");
+    const checkUrlTab = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabFromUrl = urlParams.get("tab") as "dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings" | "my-content" | null;
+      if (tabFromUrl && ["dashboard", "songs", "albums", "playlists", "upload", "settings", "my-content"].includes(tabFromUrl)) {
+        setActiveTab(tabFromUrl);
+      }
+    };
+    
+    checkUrlTab();
+    // Lắng nghe sự kiện popstate khi user navigate bằng browser back/forward
+    window.addEventListener("popstate", checkUrlTab);
+    return () => window.removeEventListener("popstate", checkUrlTab);
+  }, []);
+
+  useEffect(() => {
+    // Lấy thông tin user từ API để đảm bảo role được cập nhật
+    const loadUserInfo = async () => {
+      try {
+        const { getCurrentUser } = await import("../services/auth.service");
+        const userProfile = await getCurrentUser();
+        
+        // Cập nhật role từ API (đảm bảo role mới nhất sau khi admin gán quyền)
+        if (userProfile.role) {
+          // Normalize role: loại bỏ "ROLE_" prefix và chuyển về lowercase
+          const normalizedRole = userProfile.role.replace(/^ROLE_/i, "").toLowerCase();
+          localStorage.setItem("role", normalizedRole);
+        }
+        if (userProfile.firstName && userProfile.lastName) {
+          setArtistName(`${userProfile.firstName} ${userProfile.lastName}`);
+          localStorage.setItem("userName", `${userProfile.firstName} ${userProfile.lastName}`);
+        }
+        if ((userProfile as any).profileImage) {
+          setAvatar((userProfile as any).profileImage);
+          localStorage.setItem("avatar", (userProfile as any).profileImage);
+        } else {
+          // Ensure avatar always has a value
+          const fallbackAvatar = localStorage.getItem("avatar") || "https://cdn-icons-png.flaticon.com/512/3974/3974038.png";
+          setAvatar(fallbackAvatar);
+        }
+      } catch (err: any) {
+        console.error("Error loading user info:", err);
+        // Check if it's a 401 error (unauthorized)
+        if (err?.response?.status === 401) {
+          // Token is invalid or missing, redirect to login
+          localStorage.clear();
+          window.location.href = "/";
+          return;
+        }
+        // Fallback nếu không lấy được từ API
+        setArtistName(localStorage.getItem("userName") || "Artist");
+        setAvatar(localStorage.getItem("avatar") || "https://cdn-icons-png.flaticon.com/512/3974/3974038.png");
+      }
+    };
+    
+    loadUserInfo();
     fetchData();
   }, []);
 
@@ -260,6 +388,27 @@ const ArtistDashboard = () => {
     }
   };
 
+  const handleBackgroundMusicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Validate file type
+      if (!file.type.startsWith('audio/')) {
+        alert('Vui lòng chọn file audio (MP3, WAV, etc.)');
+        return;
+      }
+      // Validate file size (max 20MB)
+      if (file.size > 20 * 1024 * 1024) {
+        alert('Kích thước file không được vượt quá 20MB');
+        return;
+      }
+      setAlbumForm({ 
+        ...albumForm, 
+        backgroundMusicFile: file,
+        backgroundMusicUrl: URL.createObjectURL(file)
+      });
+    }
+  };
+
   // --- HANDLER SAVE ALBUM ---
   const handleSaveAlbum = async () => {
     if (!albumForm.title) return alert("Cần nhập tên Album!");
@@ -271,15 +420,61 @@ const ArtistDashboard = () => {
             coverUrl = await uploadToCloudinary(albumForm.coverFile);
         }
 
-        const payload = {
+        let backgroundMusicUrl = albumForm.backgroundMusicUrl;
+        if (albumForm.backgroundMusicFile) {
+            // Upload nhạc nền lên Cloudinary
+            const formData = new FormData();
+            formData.append("file", albumForm.backgroundMusicFile);
+            formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+            
+            try {
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
+                    method: "POST",
+                    body: formData,
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    backgroundMusicUrl = data.secure_url;
+                } else {
+                    throw new Error("Lỗi upload nhạc nền");
+                }
+            } catch (uploadErr) {
+                console.error("Error uploading background music:", uploadErr);
+                alert("Lỗi upload nhạc nền. Vui lòng thử lại.");
+                setIsSubmitting(false);
+                return;
+            }
+        }
+
+        const payload: any = {
             title: albumForm.title,
-            year: albumForm.year,
-            desc: albumForm.desc,
-            cover: coverUrl, 
+            type: albumForm.type || "FREE",
         };
+        
+        // Chỉ thêm các field nếu có giá trị
+        if (albumForm.releaseDate) {
+            payload.releaseDate = albumForm.releaseDate;
+        }
+        if (coverUrl) {
+            payload.coverImage = coverUrl;
+        }
+        if (backgroundMusicUrl) {
+            payload.backgroundMusic = backgroundMusicUrl;
+        }
+        
+        // Đảm bảo không có field thừa
+        const cleanPayload: any = {
+            title: payload.title,
+            type: payload.type,
+        };
+        if (payload.releaseDate) cleanPayload.releaseDate = payload.releaseDate;
+        if (payload.coverImage) cleanPayload.coverImage = payload.coverImage;
+        if (payload.backgroundMusic) cleanPayload.backgroundMusic = payload.backgroundMusic;
+        
+        console.log('Album payload (cleaned):', cleanPayload);
 
         if (editingAlbum) {
-            await apiService.updateItem('albums', editingAlbum.id, payload);
+            await updateMyAlbum(editingAlbum.id as number, cleanPayload);
             const targetAlbumId = String(editingAlbum.id);
 
             const songsToAdd = songs.filter(s => {
@@ -310,14 +505,14 @@ const ArtistDashboard = () => {
             setEditingAlbum(null);
             alert("Cập nhật Album thành công!");
         } else {
-            await apiService.createItem('albums', payload);
+            await createMyAlbum(cleanPayload);
             await fetchData();
             setIsCreatingAlbum(false);
             alert("Tạo Album thành công!");
         }
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
-        alert("Lỗi khi lưu Album: " + err);
+        alert("Lỗi khi lưu Album: " + (err.response?.data?.message || err.message || err));
     } finally {
         setIsSubmitting(false);
     }
@@ -364,42 +559,69 @@ const ArtistDashboard = () => {
     setIsSubmitting(true);
 
     try {
+        // Upload cover image nếu có
         let finalCoverUrl = songForm.coverPreview;
         if (songForm.coverFile) {
             finalCoverUrl = await uploadToCloudinary(songForm.coverFile);
         }
 
-        const formData = new FormData();
-        if (songForm.file) formData.append("file", songForm.file);
-        formData.append("title", songForm.title);
-        formData.append("artist", songForm.artist || artistName); 
-        formData.append("description", songForm.description);     
-        formData.append("coverImage", finalCoverUrl || "");
-        
-        if (!editingSong) formData.append("releaseDate", new Date().toISOString().split('T')[0]);
-        
-        const selectedGenreId = GENRE_MAP[songForm.genre] || 1;
-        formData.append("genreId", String(selectedGenreId));
+        // Upload audio file lên backend (sử dụng upload service)
+        let fileUrl = "";
+        if (songForm.file) {
+            try {
+                const { uploadFile } = await import("../services/upload.service");
+                const uploadResult = await uploadFile(songForm.file);
+                fileUrl = uploadResult.url;
+            } catch (uploadErr: any) {
+                console.error("Error uploading audio:", uploadErr);
+                alert("Lỗi upload file nhạc: " + (uploadErr.response?.data?.message || uploadErr.message || "Vui lòng thử lại"));
+                setIsSubmitting(false);
+                return;
+            }
+        } else if (editingSong && (editingSong as any).audioUrl) {
+            // Nếu đang edit và không có file mới, dùng URL cũ
+            fileUrl = (editingSong as any).audioUrl;
+        } else if (editingSong && (editingSong as any).fileUrl) {
+            // Fallback: thử fileUrl
+            fileUrl = (editingSong as any).fileUrl;
+        }
 
-        if (songForm.albumId) formData.append("albumId", String(songForm.albumId));
-        else formData.append("albumId", ""); 
+        // Tìm genreId từ genre name
+        const selectedGenre = genres.find(g => g.genreName === songForm.genre);
+        const selectedGenreId = selectedGenre?.id || (genres.length > 0 ? genres[0].id : 1);
+
+        const payload: any = {
+            title: songForm.title,
+            fileUrl: fileUrl,
+            genreId: selectedGenreId,
+        };
+
+        if (finalCoverUrl) {
+            payload.coverImage = finalCoverUrl;
+        }
+        if (songForm.albumId) {
+            payload.albumId = parseInt(String(songForm.albumId));
+        }
+        if (songForm.duration) {
+            payload.duration = songForm.duration;
+        }
 
         if (editingSong) {
-            await apiService.updateItem('songs', editingSong.id, formData);
+            await updateMySong(editingSong.id as number, payload);
             await fetchData();
             setIsEditModalOpen(false);
             setEditingSong(null);
             alert("Cập nhật bài hát thành công!");
         } else {
-            await apiService.createItem('songs', formData);
+            await createMySong(payload);
             await fetchData();
-            setSongForm({ title: "", artist: "", description: "", genre: "Pop", status: "Public", albumId: "", file: null, fileName: "", coverFile: null, coverPreview: "" });
+            setSongForm({ title: "", artist: "", description: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", file: null, fileName: "", coverFile: null, coverPreview: "" });
             setActiveTab("songs");
             alert("Đăng tải bài hát thành công!");
         }
     } catch (err: any) {
         console.error(err);
-        alert("Lỗi: " + err.message);
+        alert("Lỗi: " + (err.response?.data?.message || err.message || "Vui lòng thử lại"));
     } finally {
         setIsSubmitting(false);
     }
@@ -407,7 +629,17 @@ const ArtistDashboard = () => {
 
   // --- UI HELPERS ---
   const openCreateAlbum = () => {
-    setAlbumForm({ title: "", year: new Date().getFullYear().toString(), desc: "", coverFile: null, coverPreview: "", selectedSongIds: [] });
+    setAlbumForm({ 
+      title: "", 
+      releaseDate: new Date().toISOString().split('T')[0], 
+      desc: "", 
+      type: "FREE", 
+      coverFile: null, 
+      coverPreview: "",
+      backgroundMusicFile: null,
+      backgroundMusicUrl: "",
+      selectedSongIds: [] 
+    });
     setIsCreatingAlbum(true);
     setActiveTab("albums");
   };
@@ -415,12 +647,31 @@ const ArtistDashboard = () => {
   const openEditAlbum = (album: Album) => {
     const currentAlbumSongs = songs.filter(s => String(s.albumId) === String(album.id)).map(s => s.id);
     setEditingAlbum(album);
+    // Format releaseDate từ string hoặc Date sang YYYY-MM-DD
+    let releaseDateValue = "";
+    if (album.releaseDate) {
+      try {
+        const date = new Date(album.releaseDate);
+        if (!isNaN(date.getTime())) {
+          releaseDateValue = date.toISOString().split('T')[0];
+        }
+      } catch (e) {
+        // Nếu không parse được, giữ nguyên
+        releaseDateValue = album.releaseDate;
+      }
+    } else if (album.year) {
+      // Fallback: nếu có year cũ, tạo date từ năm
+      releaseDateValue = `${album.year}-01-01`;
+    }
     setAlbumForm({
         title: album.title,
-        year: album.year,
+        releaseDate: releaseDateValue,
         desc: album.desc || album.description || "",
+        type: (album.type as "FREE" | "PREMIUM") || "FREE",
         coverFile: null,
         coverPreview: album.cover || album.coverImage || "",
+        backgroundMusicFile: null,
+        backgroundMusicUrl: (album as any).backgroundMusic || "",
         selectedSongIds: currentAlbumSongs
     });
     setEditType("album");
@@ -444,10 +695,12 @@ const ArtistDashboard = () => {
 
   const openEditSong = (song: Song) => {
     setEditingSong(song);
-    const genreName = Object.keys(GENRE_MAP).find(key => GENRE_MAP[key] === song.genreId) || "Pop";
+    // Tìm genre name từ genreId
+    const genreName = genres.find(g => g.id === song.genreId)?.genreName || (genres.length > 0 ? genres[0].genreName : "Pop");
     setSongForm({ 
         title: song.title,
-        artist: song.artist || "", 
+        artist: song.artist || "",
+        duration: song.duration || "", 
         description: song.description || "", 
         genre: genreName, 
         status: song.status, 
@@ -464,13 +717,25 @@ const ArtistDashboard = () => {
   const handleDeleteItem = async (type: 'songs'|'albums'|'playlists', id: number | string) => {
     if (!confirm("Bạn có chắc muốn xóa?")) return;
     try { 
-        await apiService.deleteItem(type, id); 
         if (type === 'albums') {
+            await deleteMyAlbum(id as number);
             const songsInAlbum = songs.filter(s => String(s.albumId) === String(id));
-            for (const s of songsInAlbum) { try { await apiService.updateItem('songs', s.id, { albumId: null }); } catch(e){} }
+            for (const s of songsInAlbum) { 
+                try { 
+                    await updateMySong(s.id as number, { albumId: undefined }); 
+                } catch(e) {
+                    console.warn('Error updating song:', e);
+                }
+            }
+        } else if (type === 'songs') {
+            await deleteMySong(id as number);
+        } else {
+            await apiService.deleteItem(type, id);
         }
         fetchData(); 
-    } catch (err) { alert("Lỗi xóa"); }
+    } catch (err: any) { 
+        alert("Lỗi xóa: " + (err.response?.data?.message || err.message || "Vui lòng thử lại")); 
+    }
   };
 
   const toggleSongInAlbum = (songId: number | string) => {
@@ -593,7 +858,7 @@ const ArtistDashboard = () => {
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div><label className="text-gray-400 text-sm mb-1 block">Thể loại</label><select value={songForm.genre} onChange={(e) => setSongForm({...songForm, genre: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600">{Object.keys(GENRE_MAP).map(g => <option key={g} value={g}>{g}</option>)}</select></div>
+                                <div><label className="text-gray-400 text-sm mb-1 block">Thể loại</label><select value={songForm.genre} onChange={(e) => setSongForm({...songForm, genre: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600">{genres.length > 0 ? genres.map(g => <option key={g.id} value={g.genreName}>{g.genreName}</option>) : <option value="">Đang tải...</option>}</select></div>
                                 <div><label className="text-gray-400 text-sm mb-1 block">Trạng thái</label><select value={songForm.status} onChange={(e) => setSongForm({...songForm, status: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600"><option>Public</option><option>Private</option></select></div>
                             </div>
                             <div><label className="text-gray-400 text-sm mb-1 block">Thuộc Album</label><select value={songForm.albumId || ""} onChange={(e) => setSongForm({...songForm, albumId: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#3BC8E7]"><option value="">-- Single --</option>{albums.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}</select></div>
@@ -609,11 +874,61 @@ const ArtistDashboard = () => {
                                     <input type="file" ref={albumFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'album')}/>
                                 </div>
                                 <div className="flex-1 space-y-2">
-                                    <input type="text" value={albumForm.title} onChange={(e) => setAlbumForm({...albumForm, title: e.target.value})} className="w-full bg-[#151a30] text-white px-3 py-2 rounded-lg border border-gray-600" placeholder="Tên Album"/>
-                                    <input type="text" value={albumForm.year} onChange={(e) => setAlbumForm({...albumForm, year: e.target.value})} className="w-full bg-[#151a30] text-white px-3 py-2 rounded-lg border border-gray-600" placeholder="Năm phát hành"/>
+                                    <div>
+                                        <label className="text-gray-400 text-sm mb-1 block">Tên Album</label>
+                                        <input type="text" value={albumForm.title} onChange={(e) => setAlbumForm({...albumForm, title: e.target.value})} className="w-full bg-[#151a30] text-white px-3 py-2 rounded-lg border border-gray-600" placeholder="Tên Album"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-gray-400 text-sm mb-1 block">Ngày phát hành</label>
+                                        <input type="date" value={albumForm.releaseDate} onChange={(e) => setAlbumForm({...albumForm, releaseDate: e.target.value})} className="w-full bg-[#151a30] text-white px-3 py-2 rounded-lg border border-gray-600"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-gray-400 text-sm mb-1 block">Loại <span className="text-red-400">*</span></label>
+                                        <select value={albumForm.type} onChange={(e) => setAlbumForm({...albumForm, type: e.target.value as "FREE" | "PREMIUM"})} className="w-full bg-[#151a30] text-white px-3 py-2 rounded-lg border border-gray-600">
+                                            <option value="FREE">Miễn phí</option>
+                                            <option value="PREMIUM">Premium</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                             <textarea value={albumForm.desc} onChange={(e) => setAlbumForm({...albumForm, desc: e.target.value})} className="w-full bg-[#151a30] text-white px-3 py-2 rounded-lg border border-gray-600" placeholder="Mô tả album..." rows={2}/>
+                            <div>
+                                <label className="text-gray-400 text-sm mb-1 block">Nhạc nền (Tùy chọn)</label>
+                                <div className="space-y-2">
+                                    {albumForm.backgroundMusicUrl && (
+                                        <div className="bg-[#151a30] p-2 rounded-lg border border-gray-600 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Music size={18} className="text-[#3BC8E7]" />
+                                                <span className="text-white text-xs">
+                                                    {albumForm.backgroundMusicFile?.name || 'Nhạc nền đã chọn'}
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAlbumForm({...albumForm, backgroundMusicFile: null, backgroundMusicUrl: ''})}
+                                                className="text-red-400 hover:text-red-500"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    )}
+                                    <input
+                                        type="file"
+                                        ref={albumBackgroundMusicInputRef}
+                                        accept="audio/*"
+                                        onChange={handleBackgroundMusicChange}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => albumBackgroundMusicInputRef.current?.click()}
+                                        className="w-full bg-[#151a30] text-white px-3 py-2 rounded-lg border border-gray-600 hover:border-[#3BC8E7] transition flex items-center justify-center gap-2 text-sm"
+                                    >
+                                        <UploadCloud size={16} />
+                                        <span>{albumForm.backgroundMusicUrl ? 'Thay đổi nhạc nền' : 'Chọn nhạc nền'}</span>
+                                    </button>
+                                </div>
+                            </div>
                             <hr className="border-gray-700 my-2"/>
                             
                             {songs.filter(s => albumForm.selectedSongIds.some(id => String(id) === String(s.id))).length > 0 && (
@@ -680,7 +995,7 @@ const ArtistDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard": return <div className="space-y-6 animate-in fade-in duration-500"><h2 className="text-3xl font-bold text-white mb-6">Tổng quan</h2><div className="grid grid-cols-1 md:grid-cols-4 gap-6">{stats.map((stat, i) => (<div key={i} className="bg-[#1E2542] p-6 rounded-2xl shadow-lg border border-gray-700"><div className="flex items-center justify-between mb-4"><div className={`p-3 rounded-full bg-opacity-20 ${stat.color.replace('text', 'bg')} ${stat.color}`}>{stat.icon}</div></div><h3 className="text-3xl font-bold text-white mb-1">{stat.value}</h3><p className="text-gray-400 text-sm">{stat.label}</p></div>))}</div></div>;
-      case "songs": return <div className="animate-in fade-in duration-500"><div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold text-white">Thư viện nhạc ({songs.length})</h2><button onClick={() => { setSongForm({ title: "", artist: "", description: "", genre: "Pop", status: "Public", albumId: "", file: null, fileName: "", coverFile: null, coverPreview: "" }); setActiveTab("upload"); }} className="bg-[#3BC8E7] text-black px-4 py-2 rounded-full font-bold hover:bg-[#34b3ce] transition flex items-center gap-2"><Plus size={18} /> Đăng bài mới</button></div><div className="bg-[#1E2542] rounded-2xl overflow-hidden border border-gray-700"><table className="w-full text-left text-gray-300"><thead className="bg-[#151a30] text-gray-400 uppercase text-xs"><tr><th className="p-4">Tên bài hát</th><th className="p-4">Album</th><th className="p-4">Trạng thái</th><th className="p-4 text-center">Hành động</th></tr></thead><tbody>{songs.map((song) => { const album = albums.find(a => String(a.id) === String(song.albumId)); return (<tr key={song.id} className="border-b border-gray-700 hover:bg-[#252d4d] transition"><td className="p-4 font-medium text-white flex items-center gap-3"><div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800">{song.coverImage || song.cover ? <img src={song.coverImage || song.cover} alt={song.title} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">♫</div>}</div><div><div>{song.title}</div><div className="text-xs text-gray-500">{song.artist || song.genre || "Pop"}</div></div></td><td className="p-4 text-sm text-gray-400">{album ? <span className="flex items-center gap-1 text-[#3BC8E7]"><Disc size={14}/> {album.title}</span> : <span className="text-gray-600 italic">Single</span>}</td><td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${song.status === 'Public' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{song.status}</span></td><td className="p-4 flex justify-center gap-3"><button onClick={() => openEditSong(song)} className="text-gray-400 hover:text-[#3BC8E7]"><Edit size={18} /></button><button onClick={() => handleDeleteItem('songs', song.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button></td></tr>); })}</tbody></table></div></div>;
+      case "songs": return <div className="animate-in fade-in duration-500"><div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold text-white">Thư viện nhạc ({songs.length})</h2><button onClick={() => { setSongForm({ title: "", artist: "", description: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", file: null, fileName: "", coverFile: null, coverPreview: "" }); setActiveTab("upload"); }} className="bg-[#3BC8E7] text-black px-4 py-2 rounded-full font-bold hover:bg-[#34b3ce] transition flex items-center gap-2"><Plus size={18} /> Đăng bài mới</button></div><div className="bg-[#1E2542] rounded-2xl overflow-hidden border border-gray-700"><table className="w-full text-left text-gray-300"><thead className="bg-[#151a30] text-gray-400 uppercase text-xs"><tr><th className="p-4">Tên bài hát</th><th className="p-4">Thể loại</th><th className="p-4">Album</th><th className="p-4">Trạng thái</th><th className="p-4 text-center">Hành động</th></tr></thead><tbody>{songs.map((song) => { const album = albums.find(a => String(a.id) === String(song.albumId)); const songGenre = genres.find(g => g.id === song.genreId); return (<tr key={song.id} className="border-b border-gray-700 hover:bg-[#252d4d] transition"><td className="p-4 font-medium text-white flex items-center gap-3"><div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800">{song.coverImage || song.cover ? <img src={song.coverImage || song.cover} alt={song.title} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">♫</div>}</div><div><div>{song.title}</div><div className="text-xs text-gray-500">{song.artist || "Nghệ sĩ"}</div></div></td><td className="p-4 text-sm text-gray-400">{songGenre ? <span className="px-2 py-1 rounded bg-[#3BC8E7]/20 text-[#3BC8E7]">{songGenre.genreName}</span> : <span className="text-gray-600 italic">-</span>}</td><td className="p-4 text-sm text-gray-400">{album ? <span className="flex items-center gap-1 text-[#3BC8E7]"><Disc size={14}/> {album.title}</span> : <span className="text-gray-600 italic">Single</span>}</td><td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${song.status === 'Public' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{song.status}</span></td><td className="p-4 flex justify-center gap-3"><button onClick={() => openEditSong(song)} className="text-gray-400 hover:text-[#3BC8E7]"><Edit size={18} /></button><button onClick={() => handleDeleteItem('songs', song.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button></td></tr>); })}</tbody></table></div></div>;
       
       // --- TAB UPLOAD ---
       case "upload": return (
@@ -707,7 +1022,7 @@ const ArtistDashboard = () => {
                         <div>
                              <label className="text-gray-400 text-sm mb-1 block">Thể loại</label>
                             <select value={songForm.genre} onChange={(e) => setSongForm({...songForm, genre: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-3 rounded-lg border border-gray-700">
-                                {Object.keys(GENRE_MAP).map(g => <option key={g} value={g}>{g}</option>)}
+                                {genres.length > 0 ? genres.map(g => <option key={g.id} value={g.genreName}>{g.genreName}</option>) : <option value="">Đang tải...</option>}
                             </select>
                         </div>
                         <div>
@@ -771,7 +1086,21 @@ const ArtistDashboard = () => {
                                     <div className="p-4">
                                         <h3 className="text-white font-bold text-lg truncate" title={album.title}>{album.title}</h3>
                                         <div className="flex justify-between items-center mt-2 text-gray-400 text-sm">
-                                            <span className="flex items-center gap-1"><Calendar size={14}/> {album.year}</span>
+                                            <span className="flex items-center gap-1">
+                                                <Calendar size={14}/> {
+                                                    album.releaseDate 
+                                                        ? (() => {
+                                                            try {
+                                                                const date = new Date(album.releaseDate);
+                                                                if (!isNaN(date.getTime())) {
+                                                                    return date.toLocaleDateString('vi-VN');
+                                                                }
+                                                            } catch {}
+                                                            return album.releaseDate;
+                                                        })()
+                                                        : album.year || '-'
+                                                }
+                                            </span>
                                             <span className="bg-gray-700 px-2 py-0.5 rounded text-xs text-gray-300">{songCount} bài hát</span>
                                         </div>
                                     </div>
@@ -794,8 +1123,46 @@ const ArtistDashboard = () => {
                             </div>
                             <div className="w-full md:w-2/3 space-y-4">
                                 <div><label className="block text-gray-400 text-sm mb-2">Tên Album</label><input type="text" value={albumForm.title} onChange={(e) => setAlbumForm({...albumForm, title: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-[#3BC8E7]" placeholder="Tên album..." /></div>
-                                <div><label className="block text-gray-400 text-sm mb-2">Năm phát hành</label><input type="text" value={albumForm.year} onChange={(e) => setAlbumForm({...albumForm, year: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-[#3BC8E7]" /></div>
+                                <div><label className="block text-gray-400 text-sm mb-2">Ngày phát hành</label><input type="date" value={albumForm.releaseDate} onChange={(e) => setAlbumForm({...albumForm, releaseDate: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-[#3BC8E7]" /></div>
+                                <div><label className="block text-gray-400 text-sm mb-2">Loại <span className="text-red-400">*</span></label><select value={albumForm.type} onChange={(e) => setAlbumForm({...albumForm, type: e.target.value as "FREE" | "PREMIUM"})} className="w-full bg-[#151a30] text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-[#3BC8E7]"><option value="FREE">Miễn phí</option><option value="PREMIUM">Premium</option></select></div>
                                 <div><label className="block text-gray-400 text-sm mb-2">Mô tả</label><textarea rows={2} value={albumForm.desc} onChange={(e) => setAlbumForm({...albumForm, desc: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-[#3BC8E7]" /></div>
+                                <div>
+                                    <label className="block text-gray-400 text-sm mb-2">Nhạc nền (Tùy chọn)</label>
+                                    <div className="space-y-2">
+                                        {albumForm.backgroundMusicUrl && (
+                                            <div className="bg-[#151a30] p-3 rounded-lg border border-gray-700 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Music size={20} className="text-[#3BC8E7]" />
+                                                    <span className="text-white text-sm">
+                                                        {albumForm.backgroundMusicFile?.name || 'Nhạc nền đã chọn'}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAlbumForm({...albumForm, backgroundMusicFile: null, backgroundMusicUrl: ''})}
+                                                    className="text-red-400 hover:text-red-500"
+                                                >
+                                                    <X size={18} />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            ref={albumBackgroundMusicInputRef}
+                                            accept="audio/*"
+                                            onChange={handleBackgroundMusicChange}
+                                            className="hidden"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => albumBackgroundMusicInputRef.current?.click()}
+                                            className="w-full bg-[#151a30] text-white px-4 py-3 rounded-lg border border-gray-700 hover:border-[#3BC8E7] transition flex items-center justify-center gap-2"
+                                        >
+                                            <UploadCloud size={18} />
+                                            <span>{albumForm.backgroundMusicUrl ? 'Thay đổi nhạc nền' : 'Chọn nhạc nền (MP3, WAV - tối đa 20MB)'}</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div className="flex gap-4 pt-4 border-t border-gray-700">
@@ -875,6 +1242,7 @@ const ArtistDashboard = () => {
         </div>
       );
 
+      case "my-content": return <MyAlbumsTab />;
       default: return null;
     }
   };
@@ -884,14 +1252,13 @@ const ArtistDashboard = () => {
       <aside className="w-64 bg-[#1B2039] flex flex-col border-r border-gray-800 hidden md:flex sticky top-0 h-screen">
         <div className="p-8 flex items-center gap-3"><div className="w-8 h-8 bg-[#3BC8E7] rounded-full flex items-center justify-center font-bold text-black">A</div><h1 className="text-xl font-bold text-white tracking-wider">ARTIST<span className="text-[#3BC8E7]">HUB</span></h1></div>
         <nav className="flex-1 px-4 space-y-2">
+            <SidebarItem icon={<Home size={20} />} label="Trang chủ" active={false} onClick={() => { window.location.href = "/"; }} />
             <SidebarItem icon={<LayoutDashboard size={20} />} label="Tổng quan" active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
+            <SidebarItem icon={<FolderOpen size={20} />} label="Đăng tải của tôi" active={activeTab === "my-content"} onClick={() => setActiveTab("my-content")} />
             <SidebarItem icon={<Music size={20} />} label="Bài hát" active={activeTab === "songs"} onClick={() => setActiveTab("songs")} />
             <SidebarItem icon={<Disc size={20} />} label="Albums" active={activeTab === "albums"} onClick={() => {setActiveTab("albums"); setIsCreatingAlbum(false)}} />
-            <SidebarItem icon={<ListMusic size={20} />} label="Playlists" active={activeTab === "playlists"} onClick={() => {setActiveTab("playlists"); setIsCreatingPlaylist(false)}} />
-            <SidebarItem icon={<UploadCloud size={20} />} label="Đăng tải nhạc" active={activeTab === "upload"} onClick={() => setActiveTab("upload")} />
-            <SidebarItem icon={<Settings size={20} />} label="Cài đặt" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
         </nav>
-        <div className="p-4 border-t border-gray-800"><div className="flex items-center gap-3 mb-4"><img src={avatar} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-[#3BC8E7]" /><div className="overflow-hidden"><p className="text-sm font-bold text-white truncate">{artistName}</p><p className="text-xs text-[#3BC8E7]">Artist Account</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-gray-400 hover:text-white transition w-full px-2 py-2 rounded-lg hover:bg-white/5"><LogOut size={18} /><span>Đăng xuất</span></button></div>
+        <div className="p-4 border-t border-gray-800"><div className="flex items-center gap-3 mb-4"><img src={avatar || "https://cdn-icons-png.flaticon.com/512/3974/3974038.png"} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-[#3BC8E7]" /><div className="overflow-hidden"><p className="text-sm font-bold text-white truncate">{artistName}</p><p className="text-xs text-[#3BC8E7]">Artist Account</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-gray-400 hover:text-white transition w-full px-2 py-2 rounded-lg hover:bg-white/5"><LogOut size={18} /><span>Đăng xuất</span></button></div>
       </aside>
       <main className="flex-1 p-8 overflow-y-auto relative"><div className="md:hidden flex justify-between items-center mb-8"><h1 className="text-xl font-bold">ARTIST HUB</h1><button className="p-2 bg-[#1B2039] rounded"><User/></button></div>{renderContent()}</main>
       {renderEditModal()}

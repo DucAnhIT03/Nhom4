@@ -58,3 +58,10 @@ export const getArtistById = async (id: number): Promise<Artist> => {
   return response.data;
 };
 
+/**
+ * Interface cho artist với tổng lượt nghe
+ */
+export interface ArtistWithTotalViews extends Artist {
+  totalViews: number;
+}
+

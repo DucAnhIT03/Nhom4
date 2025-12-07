@@ -17,11 +17,17 @@ import { UpdateUserDto } from "../dtos/request/update-user.dto";
 import { QueryUserDto } from "../dtos/request/query-user.dto";
 import { UpdateUserStatusDto } from "../dtos/request/update-user-status.dto";
 import { ChangePasswordDto } from "../dtos/request/change-password.dto";
+import { UpdateUserRolesDto } from "../dtos/request/update-user-roles.dto";
 import { AuthGuard } from "../../../common/guards/auth.guard";
+import { RolesGuard } from "../../../common/guards/roles.guard";
+import { Roles } from "../../../common/decorators/roles.decorator";
+import { CurrentUser } from "../../../common/decorators/current-user.decorator";
+import { RoleName } from "../../../shared/schemas/role.schema";
 
 @ApiTags("Quản lý người dùng")
 @Controller("users")
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(RoleName.ADMIN)
 @ApiBearerAuth("access-token")
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -30,6 +36,12 @@ export class UserController {
   @Get()
   async findAll(@Query() query: QueryUserDto) {
     return this.userService.findAll(query);
+  }
+
+  @ApiOperation({ summary: "Lấy danh sách tất cả các quyền có trong hệ thống" })
+  @Get("roles/all")
+  async getAllRoles() {
+    return this.userService.getAllRoles();
   }
 
   @ApiOperation({ summary: "Lấy thông tin người dùng theo ID" })
@@ -75,6 +87,19 @@ export class UserController {
   @Delete(":id")
   async remove(@Param("id", ParseIntPipe) id: number) {
     return this.userService.remove(id);
+  }
+
+  @ApiOperation({ summary: "Cập nhật quyền cho người dùng" })
+  @Put(":id/roles")
+  async updateUserRoles(
+    @Param("id", ParseIntPipe) id: number,
+    @Body() updateRolesDto: UpdateUserRolesDto,
+    @CurrentUser() currentUser: { id: number; email: string; roles?: RoleName[] } | null,
+  ) {
+    if (!currentUser) {
+      throw new Error("User not authenticated");
+    }
+    return this.userService.updateUserRoles(id, updateRolesDto, currentUser.id);
   }
 }
 

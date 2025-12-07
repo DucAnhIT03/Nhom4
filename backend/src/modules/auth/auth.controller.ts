@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Put, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dtos/register.dto";
@@ -39,6 +39,13 @@ export class AuthController {
     return this.authService.adminLogin(dto);
   }
 
+  @ApiOperation({ summary: "Đăng nhập nghệ sĩ và lấy access token" })
+  @Post("artist/login")
+  @HttpCode(HttpStatus.OK)
+  async artistLogin(@Body() dto: LoginDto) {
+    return this.authService.artistLogin(dto);
+  }
+
   @ApiOperation({ summary: "Lấy thông tin hồ sơ người dùng hiện tại" })
   @ApiBearerAuth("access-token")
   @Get("me")
@@ -48,6 +55,21 @@ export class AuthController {
       return null;
     }
     return this.authService.getUserProfile(user.id);
+  }
+
+  @ApiOperation({ summary: "Cập nhật thông tin hồ sơ người dùng hiện tại" })
+  @ApiBearerAuth("access-token")
+  @Put("me")
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async updateProfile(
+    @CurrentUser() user: { id: number; email?: string } | null,
+    @Body() updateData: { firstName?: string; lastName?: string; email?: string; profileImage?: string; age?: number; nationality?: string },
+  ) {
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    return this.authService.updateProfile(user.id, updateData);
   }
 }
 

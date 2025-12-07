@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Search, Trash2, Lock, Unlock } from 'lucide-react';
+import { Search, Trash2, Lock, Unlock, UserCog } from 'lucide-react';
 import { getUsers, deleteUser, toggleUserStatus } from '@/services/user.service';
 import type { User } from '@/services/user.service';
 import ConfirmModal from '../components/ConfirmModal';
+import RoleModal from '../components/RoleModal';
 import './UserManagementPage.css';
 
 const UserManagementPage = () => {
@@ -18,6 +19,13 @@ const UserManagementPage = () => {
   }>({
     isOpen: false,
     type: 'block',
+    user: null,
+  });
+  const [roleModal, setRoleModal] = useState<{
+    isOpen: boolean;
+    user: User | null;
+  }>({
+    isOpen: false,
     user: null,
   });
   const limit = 10;
@@ -64,6 +72,13 @@ const UserManagementPage = () => {
     setConfirmModal({
       isOpen: true,
       type: 'unblock',
+      user,
+    });
+  };
+
+  const handleAssignRole = (user: User) => {
+    setRoleModal({
+      isOpen: true,
       user,
     });
   };
@@ -167,6 +182,13 @@ const UserManagementPage = () => {
                     </td>
                     <td>
                       <div className="action-buttons">
+                        <button
+                          className="btn-icon btn-role"
+                          onClick={() => handleAssignRole(user)}
+                          title="Gán quyền"
+                        >
+                          <UserCog size={16} />
+                        </button>
                         {user.status === 'BLOCKED' ? (
                           <button
                             className="btn-icon btn-unblock"
@@ -249,6 +271,16 @@ const UserManagementPage = () => {
         type={confirmModal.type === 'delete' ? 'danger' : 'warning'}
         onConfirm={handleConfirmAction}
         onCancel={() => setConfirmModal({ isOpen: false, type: 'block', user: null })}
+      />
+
+      <RoleModal
+        user={roleModal.user}
+        isOpen={roleModal.isOpen}
+        onClose={() => setRoleModal({ isOpen: false, user: null })}
+        onSuccess={() => {
+          setRoleModal({ isOpen: false, user: null });
+          loadUsers();
+        }}
       />
     </div>
   );
