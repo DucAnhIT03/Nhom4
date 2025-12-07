@@ -1,7 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ILike, Repository } from "typeorm";
+import { ILike, In, Repository } from "typeorm";
 import { Comment } from "../../../shared/schemas/comment.schema";
+import { User } from "../../../shared/schemas/user.schema";
+import { Song } from "../../../shared/schemas/song.schema";
+import { Artist } from "../../../shared/schemas/artist.schema";
 import { CreateCommentDto } from "../dtos/request/create-comment.dto";
 import { UpdateCommentDto } from "../dtos/request/update-comment.dto";
 import { QueryCommentDto } from "../dtos/request/query-comment.dto";
@@ -11,6 +14,12 @@ export class CommentService {
   constructor(
     @InjectRepository(Comment)
     private readonly commentRepository: Repository<Comment>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(Song)
+    private readonly songRepository: Repository<Song>,
+    @InjectRepository(Artist)
+    private readonly artistRepository: Repository<Artist>,
   ) {}
 
   async findBySong(
@@ -31,7 +40,23 @@ export class CommentService {
       take: limit,
     });
 
-    return { data, total, page, limit };
+    // Load user info cho mỗi comment
+    const commentsWithUser = await Promise.all(
+      data.map(async (comment) => {
+        const user = await this.userRepository.findOne({ where: { id: comment.userId } });
+        return {
+          ...comment,
+          user: user ? {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+          } : undefined,
+        };
+      })
+    );
+
+    return { data: commentsWithUser, total, page, limit };
   }
 
   async findOne(id: number): Promise<Comment> {
@@ -42,9 +67,21 @@ export class CommentService {
     return comment;
   }
 
-  create(dto: CreateCommentDto): Promise<Comment> {
+  async create(dto: CreateCommentDto): Promise<Comment> {
     const entity = this.commentRepository.create(dto);
-    return this.commentRepository.save(entity);
+    const saved = await this.commentRepository.save(entity);
+    
+    // Load user info
+    const user = await this.userRepository.findOne({ where: { id: saved.userId } });
+    return {
+      ...saved,
+      user: user ? {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+      } : undefined,
+    } as Comment;
   }
 
   async update(id: number, dto: UpdateCommentDto): Promise<Comment> {
@@ -54,6 +91,77 @@ export class CommentService {
   }
 
   async remove(id: number): Promise<void> {
+    const comment = await this.findOne(id);
+    await this.commentRepository.remove(comment);
+  }
+
+  /**
+   * Lấy tất cả comments của bài hát do nghệ sĩ sở hữu (bao gồm replies)
+   */
+  async findByArtistSongs(artistId: number, sortBy: 'time' | 'likes' = 'time'): Promise<Comment[]> {
+    // Lấy tất cả bài hát của nghệ sĩ
+    const songs = await this.songRepository.find({ where: { artistId } });
+    const songIds = songs.map(s => s.id);
+
+    if (songIds.length === 0) {
+      return [];
+    }
+
+    // Lấy tất cả comments của các bài hát này
+    const comments = await this.commentRepository.find({
+      where: { songId: In(songIds) },
+      order: sortBy === 'time' ? { createdAt: 'DESC' } : undefined,
+    });
+
+    // Load user info
+    const commentsWithUser = await Promise.all(
+      comments.map(async (comment) => {
+        const user = await this.userRepository.findOne({ where: { id: comment.userId } });
+        return {
+          ...comment,
+          user: user ? {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+          } : undefined,
+        };
+      })
+    );
+
+    return commentsWithUser as Comment[];
+  }
+
+  /**
+   * Kiểm tra quyền xóa comment (chỉ nghệ sĩ sở hữu bài hát mới xóa được)
+   */
+  async canDeleteComment(commentId: number, userId: number): Promise<boolean> {
+    const comment = await this.findOne(commentId);
+    const song = await this.songRepository.findOne({ where: { id: comment.songId } });
+    
+    if (!song) {
+      return false;
+    }
+
+    // Lấy artist từ userId
+    const artist = await this.artistRepository.findOne({ where: { userId } });
+    if (!artist) {
+      return false;
+    }
+
+    // Kiểm tra nghệ sĩ có sở hữu bài hát không
+    return song.artistId === artist.id;
+  }
+
+  /**
+   * Xóa comment với kiểm tra quyền
+   */
+  async removeByArtist(id: number, userId: number): Promise<void> {
+    const canDelete = await this.canDeleteComment(id, userId);
+    if (!canDelete) {
+      throw new ForbiddenException("Bạn không có quyền xóa bình luận này");
+    }
+    
     const comment = await this.findOne(id);
     await this.commentRepository.remove(comment);
   }

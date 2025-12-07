@@ -1,6 +1,7 @@
 .song-management-page {
   width: 100%;
   color: #ffffff;
+  padding-bottom: 90px; /* Space for music player bar */
 }
 
 .page-header {
@@ -232,5 +233,25 @@
 
 .btn-delete:hover {
   background: rgba(229, 62, 62, 0.3);
+}
+
+.btn-play-song {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(59, 200, 231, 0.2);
+  color: #3BC8E7;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.btn-play-song:hover {
+  background: rgba(59, 200, 231, 0.3);
+  transform: scale(1.1);
 }
 

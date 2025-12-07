@@ -10,6 +10,8 @@ import { addHistory, getHistory, type HistoryItem } from "../../services/history
 import CustomAudioPlayer from "../../shared/components/CustomAudioPlayer";
 import { useMusic } from "../../contexts/MusicContext";
 import MusicPlayerBar from "../HomePage/MusicPlayerBar";
+import { FaComment } from "react-icons/fa";
+import CommentModal from "../Comments/CommentModal";
 
 interface SongWithAlbum extends WishlistItem {
   albumName?: string;
@@ -34,6 +36,11 @@ const Container = () => {
     audioUrl: string;
   } | null>(null);
   const { setQueue, setCurrentlyPlayingSong: setContextSong, setCurrentIndex: setContextIndex } = useMusic();
+  const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
+    isOpen: false,
+    songId: 0,
+    songTitle: '',
+  });
 
   // Lấy userId
   useEffect(() => {
@@ -262,6 +269,7 @@ const Container = () => {
                 <th className="py-3">Song Title</th>
                 <th className="py-3">Album</th>
                 <th className="py-3 w-[400px] min-w-[350px]">Nghe</th>
+                <th className="py-3 text-center w-[80px]">Comment</th>
                 <th className="py-3 text-center w-[80px]">Remove</th>
               </tr>
             </thead>
@@ -301,6 +309,22 @@ const Container = () => {
                     ) : (
                       <span className="text-gray-500 text-sm">-</span>
                     )}
+                  </td>
+                  <td className="py-3 text-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCommentModal({
+                          isOpen: true,
+                          songId: item.song.id,
+                          songTitle: item.song.title,
+                        });
+                      }}
+                      className="hover:text-[#3BC8E7] transition"
+                      title="Xem bình luận"
+                    >
+                      <FaComment size={18} />
+                    </button>
                   </td>
                   <td className="py-3 text-center">
                     <button
@@ -408,6 +432,14 @@ const Container = () => {
       </div>
 
       <MusicPlayerBar song={currentlyPlayingSong} />
+
+      {/* Comment Modal */}
+      <CommentModal
+        isOpen={commentModal.isOpen}
+        onClose={() => setCommentModal({ isOpen: false, songId: 0, songTitle: '' })}
+        songId={commentModal.songId}
+        songTitle={commentModal.songTitle}
+      />
     </div>
   );
 };

@@ -95,6 +95,9 @@ CREATE TABLE IF NOT EXISTS albums (
   type ENUM('FREE','PREMIUM') NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_album_artist_id (artist_id),
+  INDEX idx_album_genre_id (genre_id),
+  INDEX idx_album_created_at (created_at),
   CONSTRAINT fk_album_artist FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE CASCADE,
   CONSTRAINT fk_album_genre FOREIGN KEY (genre_id) REFERENCES genres(id) ON DELETE CASCADE,
   CONSTRAINT chk_album_owner CHECK (artist_id IS NOT NULL OR genre_id IS NOT NULL)
@@ -115,6 +118,11 @@ CREATE TABLE IF NOT EXISTS songs (
   views INT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_song_artist_id (artist_id),
+  INDEX idx_song_album_id (album_id),
+  INDEX idx_song_genre_id (genre_id),
+  INDEX idx_song_views (views),
+  INDEX idx_song_created_at (created_at),
   CONSTRAINT fk_song_artist FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE CASCADE,
   CONSTRAINT fk_song_album FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE,
   CONSTRAINT fk_song_genre FOREIGN KEY (genre_id) REFERENCES genres(id) ON DELETE SET NULL
@@ -127,6 +135,8 @@ CREATE TABLE IF NOT EXISTS song_genre (
   song_id INT NOT NULL,
   genre_id INT NOT NULL,
   PRIMARY KEY (song_id, genre_id),
+  INDEX idx_song_genre_song_id (song_id),
+  INDEX idx_song_genre_genre_id (genre_id),
   CONSTRAINT fk_song_genre_song FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
   CONSTRAINT fk_song_genre_genre FOREIGN KEY (genre_id) REFERENCES genres(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -141,6 +151,8 @@ CREATE TABLE IF NOT EXISTS playlists (
   is_public BIT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_playlist_user_id (user_id),
+  INDEX idx_playlist_is_public (is_public),
   CONSTRAINT fk_playlist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -152,6 +164,8 @@ CREATE TABLE IF NOT EXISTS playlist_song (
   song_id INT NOT NULL,
   added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (playlist_id, song_id),
+  INDEX idx_playlist_song_playlist_id (playlist_id),
+  INDEX idx_playlist_song_song_id (song_id),
   CONSTRAINT fk_playlist_song_playlist FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
   CONSTRAINT fk_playlist_song_song FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -167,6 +181,10 @@ CREATE TABLE IF NOT EXISTS comments (
   parent_id INT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_comment_song_id (song_id),
+  INDEX idx_comment_user_id (user_id),
+  INDEX idx_comment_parent_id (parent_id),
+  INDEX idx_comment_created_at (created_at),
   CONSTRAINT fk_comment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_comment_song FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
   CONSTRAINT fk_comment_parent FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
@@ -179,6 +197,8 @@ CREATE TABLE IF NOT EXISTS wishlists (
   user_id INT NOT NULL,
   song_id INT NOT NULL,
   PRIMARY KEY (user_id, song_id),
+  INDEX idx_wishlist_user_id (user_id),
+  INDEX idx_wishlist_song_id (song_id),
   CONSTRAINT fk_wishlist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_wishlist_song FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -191,6 +211,9 @@ CREATE TABLE IF NOT EXISTS downloads (
   song_id INT NOT NULL,
   added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, song_id),
+  INDEX idx_download_user_id (user_id),
+  INDEX idx_download_song_id (song_id),
+  INDEX idx_download_added_at (added_at),
   CONSTRAINT fk_download_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_download_song FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -203,6 +226,9 @@ CREATE TABLE IF NOT EXISTS song_histories (
   song_id INT NOT NULL,
   played_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, song_id, played_at),
+  INDEX idx_history_user_id (user_id),
+  INDEX idx_history_song_id (song_id),
+  INDEX idx_history_played_at (played_at),
   CONSTRAINT fk_history_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_history_song FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -232,6 +258,9 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   status ENUM('ACTIVE','EXPIRED','CANCELLED') NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_subscription_user_id (user_id),
+  INDEX idx_subscription_status (status),
+  INDEX idx_subscription_end_time (end_time),
   CONSTRAINT fk_subscription_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -249,6 +278,10 @@ CREATE TABLE IF NOT EXISTS payments (
   payment_date DATETIME NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_payment_user_id (user_id),
+  INDEX idx_payment_plan_id (plan_id),
+  INDEX idx_payment_status (payment_status),
+  INDEX idx_payment_date (payment_date),
   CONSTRAINT fk_payment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_payment_plan FOREIGN KEY (plan_id) REFERENCES subscription_plan(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

@@ -5,7 +5,8 @@ import { getAlbumById } from "../../services/album.service";
 import { incrementSongViews, getWeeklyTopTracks, getTopTracksOfAllTime, type TrendingSong } from "../../services/song.service";
 import MusicPlayerBar from "../HomePage/MusicPlayerBar";
 import { useMusic } from "../../contexts/MusicContext";
-import { FaArrowLeft } from "react-icons/fa";
+import { FaArrowLeft, FaComment } from "react-icons/fa";
+import CommentModal from "../Comments/CommentModal";
 
 interface MostPlayedItemWithAlbum extends MostPlayedItem {
   albumCover?: string;
@@ -39,6 +40,11 @@ const Container = () => {
     audioUrl: string;
   } | null>(null);
   const { setQueue, setCurrentlyPlayingSong: setContextSong, setCurrentIndex } = useMusic();
+  const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
+    isOpen: false,
+    songId: 0,
+    songTitle: '',
+  });
 
   // Lấy userId
   useEffect(() => {
@@ -272,7 +278,7 @@ const Container = () => {
                   return (
                     <div 
                       key={item.song?.id} 
-                      className={`text-white w-[175px] h-[256px] hover:scale-[1.05] transition-transform duration-200 cursor-pointer ${isPlaying ? 'ring-2 ring-[#3BC8E7] rounded-[10px]' : ''}`}
+                      className={`text-white w-[175px] h-[256px] hover:scale-[1.05] transition-transform duration-200 cursor-pointer relative group ${isPlaying ? 'ring-2 ring-[#3BC8E7] rounded-[10px]' : ''}`}
                       onClick={() => handleSongClick(item, items)}
                     >
                       <img
@@ -283,6 +289,20 @@ const Container = () => {
                           (e.target as HTMLImageElement).src = "./History/s1.jpg";
                         }}
                       />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCommentModal({
+                            isOpen: true,
+                            songId: item.song.id,
+                            songTitle: item.song.title,
+                          });
+                        }}
+                        className="absolute top-2 right-2 bg-[#3BC8E7] text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Xem bình luận"
+                      >
+                        <FaComment size={14} />
+                      </button>
                       <h3 className="font-semibold mb-1">
                         <span className="hover:text-[#3BC8E7] transition">
                           {item.song?.title}
@@ -435,9 +455,17 @@ const Container = () => {
         {renderSongs(getCurrentItems())}
       </div>
       
-      <MusicPlayerBar song={currentlyPlayingSong} />
-    </>
-  );
-};
+              <MusicPlayerBar song={currentlyPlayingSong} />
 
-export default Container;
+              {/* Comment Modal */}
+              <CommentModal
+                isOpen={commentModal.isOpen}
+                onClose={() => setCommentModal({ isOpen: false, songId: 0, songTitle: '' })}
+                songId={commentModal.songId}
+                songTitle={commentModal.songTitle}
+              />
+            </>
+          );
+        };
+
+        export default Container;

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Search, Trash2, Edit, Plus } from 'lucide-react';
+import { Search, Trash2, Edit, Plus, Play } from 'lucide-react';
 import { getSongs, deleteSong } from '@/services/song.service';
 import type { Song } from '@/services/song.service';
 import { getGenresOfSong } from '@/services/genre.service';
 import type { Genre } from '@/services/genre.service';
 import ConfirmModal from '../../artists/components/ConfirmModal';
 import SongModal from '../components/SongModal';
+import MusicPlayerBar from '@/shared/components/MusicPlayerBar';
 import './SongManagementPage.css';
 
 interface SongWithGenres extends Song {
@@ -30,6 +31,7 @@ const SongManagementPage = () => {
     isOpen: false,
     song: null,
   });
+  const [currentlyPlayingSong, setCurrentlyPlayingSong] = useState<Song | null>(null);
 
   useEffect(() => {
     loadSongs();
@@ -113,6 +115,36 @@ const SongManagementPage = () => {
     loadSongs();
   };
 
+  const handlePlaySong = (song: Song) => {
+    if (!song.fileUrl) {
+      alert('Bài hát này chưa có file audio');
+      return;
+    }
+    setCurrentlyPlayingSong(song);
+  };
+
+  const handlePlayNext = () => {
+    if (!currentlyPlayingSong) return;
+    const currentIndex = filteredSongs.findIndex(s => s.id === currentlyPlayingSong.id);
+    if (currentIndex !== -1 && currentIndex < filteredSongs.length - 1) {
+      const nextSong = filteredSongs[currentIndex + 1];
+      if (nextSong.fileUrl) {
+        setCurrentlyPlayingSong(nextSong);
+      }
+    }
+  };
+
+  const handlePlayPrevious = () => {
+    if (!currentlyPlayingSong) return;
+    const currentIndex = filteredSongs.findIndex(s => s.id === currentlyPlayingSong.id);
+    if (currentIndex > 0) {
+      const prevSong = filteredSongs[currentIndex - 1];
+      if (prevSong.fileUrl) {
+        setCurrentlyPlayingSong(prevSong);
+      }
+    }
+  };
+
   return (
     <div className="song-management-page">
       <div className="page-header">
@@ -168,6 +200,18 @@ const SongManagementPage = () => {
                     <td>{song.id}</td>
                     <td>
                       <div className="song-title-cell">
+                        {song.fileUrl && (
+                          <button
+                            className="btn-play-song"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePlaySong(song);
+                            }}
+                            title="Phát nhạc"
+                          >
+                            <Play size={16} />
+                          </button>
+                        )}
                         <span>{song.title}</span>
                       </div>
                     </td>
@@ -259,6 +303,12 @@ const SongManagementPage = () => {
           onSuccess={handleModalSuccess}
         />
       )}
+
+      <MusicPlayerBar
+        song={currentlyPlayingSong}
+        onNext={handlePlayNext}
+        onPrevious={handlePlayPrevious}
+      />
     </div>
   );
 };

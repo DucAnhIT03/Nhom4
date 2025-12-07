@@ -11,6 +11,8 @@ import { getCurrentUser } from "../services/auth.service";
 import { addHistory } from "../services/history.service";
 import { getAlbumById } from "../services/album.service";
 import CustomAudioPlayer from "../shared/components/CustomAudioPlayer";
+import { FaComment } from "react-icons/fa";
+import CommentModal from "../components/Comments/CommentModal";
 
 // Định nghĩa kiểu dữ liệu form tĩnh
 interface Song {
@@ -34,6 +36,11 @@ const ArtistDetail = () => {
   // State cho UI
   const [likedSongs, setLikedSongs] = useState<number[]>([]);
   const [userId, setUserId] = useState<number | null>(null);
+  const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
+    isOpen: false,
+    songId: 0,
+    songTitle: '',
+  });
 
   // Hàm map dữ liệu từ API sang format form tĩnh
   const mapSongToForm = (song: ApiSong): Song => {
@@ -269,12 +276,13 @@ const ArtistDetail = () => {
 
         {/* SONG LIST */}
         <div className="mt-10 pb-20">
-          <div className="grid grid-cols-[50px_2fr_1fr_500px] border-b border-[#252B4D] pb-2 text-gray-400 text-sm uppercase px-4 py-3">
+          <div className="grid grid-cols-[50px_2fr_1fr_80px_500px] border-b border-[#252B4D] pb-2 text-gray-400 text-sm uppercase px-4 py-3">
             <span className="text-center flex items-center justify-center">
               <FaHeart className="text-sm" />
             </span>
             <span>Title</span>
             <span>Album</span>
+            <span className="text-center">Comment</span>
             <span className="text-center">Nghe</span>
           </div>
 
@@ -285,7 +293,7 @@ const ArtistDetail = () => {
                 return (
                   <div 
                     key={song.id} 
-                    className="group grid grid-cols-[50px_2fr_1fr_500px] items-center px-4 py-3 rounded-md hover:bg-[#252B4D] transition cursor-pointer border-b border-transparent hover:border-[#3BC8E7]/20"
+                    className="group grid grid-cols-[50px_2fr_1fr_80px_500px] items-center px-4 py-3 rounded-md hover:bg-[#252B4D] transition border-b border-transparent hover:border-[#3BC8E7]/20"
                   >
                     <div className="text-center flex justify-center items-center" onClick={(e) => { e.stopPropagation(); toggleLike(song.id); }}>
                       {isLiked ? (
@@ -301,6 +309,22 @@ const ArtistDetail = () => {
                     </div>
                     <div className="text-gray-400 text-sm hover:text-white transition">
                       {song.albumName || "Unknown Album"}
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCommentModal({
+                            isOpen: true,
+                            songId: song.id,
+                            songTitle: song.title,
+                          });
+                        }}
+                        className="text-gray-400 hover:text-[#3BC8E7] transition"
+                        title="Xem bình luận"
+                      >
+                        <FaComment size={18} />
+                      </button>
                     </div>
                     <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                       {song.fileUrl ? (
@@ -333,6 +357,14 @@ const ArtistDetail = () => {
       </div>
 
       <Footer />
+
+      {/* Comment Modal */}
+      <CommentModal
+        isOpen={commentModal.isOpen}
+        onClose={() => setCommentModal({ isOpen: false, songId: 0, songTitle: '' })}
+        songId={commentModal.songId}
+        songTitle={commentModal.songTitle}
+      />
     </div>
   );
 };

@@ -7,15 +7,22 @@ import { useMusic, type Song } from "../../contexts/MusicContext";
 import { getArtists, type ArtistWithTotalViews } from "../../services/artist.service";
 import { getSongsByArtistId, getNewReleases } from "../../services/song.service";
 import { getAlbums } from "../../services/album.service";
+import CommentModal from "../Comments/CommentModal";
+import { FaComment } from "react-icons/fa";
 
 const Container = () => {
-  const { currentlyPlayingSong, setCurrentlyPlayingSong, queue, setQueue, setCurrentIndex } = useMusic();
+  const { currentlyPlayingSong, setCurrentlyPlayingSong, setQueue, setCurrentIndex } = useMusic();
   const [songs, setSongs] = useState<any[]>([]); // Recently Played
   const [weeklySongs, setWeeklySongs] = useState<any[]>([]); // Weekly Top 15
   const [featuredAlbums, setFeaturedAlbums] = useState<any[]>([]); // State mới cho Featured Albums
   const [featuredArtists, setFeaturedArtists] = useState<ArtistWithTotalViews[]>([]); // Featured Artists
   const [allAlbums, setAllAlbums] = useState<any[]>([]); // Tất cả albums để tìm album của artist
   const [newReleases, setNewReleases] = useState<any[]>([]); // New Releases
+  const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
+    isOpen: false,
+    songId: 0,
+    songTitle: '',
+  });
 
   useEffect(() => {
     const songID = localStorage.getItem("userId");
@@ -230,12 +237,26 @@ const Container = () => {
           {songs.map((s) => (
             <div
               key={s.id}
-              className="text-white w-[175px] h-[256px] cursor-pointer"
+              className="text-white w-[175px] h-[256px] cursor-pointer relative group"
               onClick={() => handleSongClick(s)}
             >
               <img src={s.coverImage} className="rounded-[10px] mb-[19px] w-full h-[175px] object-cover" />
               <h3 className="font-semibold truncate">{s.title}</h3>
               <h3 className="text-[#DEDEDE] truncate">{s.description}</h3>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCommentModal({
+                    isOpen: true,
+                    songId: s.id,
+                    songTitle: s.title,
+                  });
+                }}
+                className="absolute top-2 right-2 bg-[#3BC8E7] text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Xem bình luận"
+              >
+                <FaComment size={14} />
+              </button>
             </div>
           ))}
 
@@ -574,6 +595,14 @@ const Container = () => {
       </div>
 
       <MusicPlayerBar song={currentlyPlayingSong} />
+
+      {/* Comment Modal */}
+      <CommentModal
+        isOpen={commentModal.isOpen}
+        onClose={() => setCommentModal({ isOpen: false, songId: 0, songTitle: '' })}
+        songId={commentModal.songId}
+        songTitle={commentModal.songTitle}
+      />
     </>
   );
 };

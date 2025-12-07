@@ -1,4 +1,6 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { AuthGuard } from "../../../common/guards/auth.guard";
+import { CurrentUser } from "../../../common/decorators/current-user.decorator";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CommentService } from "../services/comment.service";
 import { CreateCommentDto } from "../dtos/request/create-comment.dto";
@@ -38,6 +40,26 @@ export class CommentController {
   @Delete(":id")
   remove(@Param("id", ParseIntPipe) id: number) {
     return this.commentService.remove(id);
+  }
+
+  @ApiOperation({ summary: "Lấy comments của bài hát do nghệ sĩ sở hữu" })
+  @Get("artist/:artistId")
+  @UseGuards(AuthGuard)
+  findByArtistSongs(
+    @Param("artistId", ParseIntPipe) artistId: number,
+    @Query("sortBy") sortBy?: "time" | "likes",
+  ) {
+    return this.commentService.findByArtistSongs(artistId, sortBy || "time");
+  }
+
+  @ApiOperation({ summary: "Xóa bình luận (chỉ nghệ sĩ sở hữu bài hát)" })
+  @Delete("artist/:id")
+  @UseGuards(AuthGuard)
+  removeByArtist(
+    @Param("id", ParseIntPipe) id: number,
+    @CurrentUser() user: any,
+  ) {
+    return this.commentService.removeByArtist(id, user.id);
   }
 }
 

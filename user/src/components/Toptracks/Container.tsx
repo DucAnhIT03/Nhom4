@@ -7,6 +7,8 @@ import { addHistory } from "../../services/history.service";
 import { getCurrentUser } from "../../services/auth.service";
 import { useMusic } from "../../contexts/MusicContext";
 import MusicPlayerBar from "../HomePage/MusicPlayerBar";
+import { FaComment } from "react-icons/fa";
+import CommentModal from "../Comments/CommentModal";
 
 interface TrendingSongWithAlbum extends TrendingSong {
   albumCover?: string;
@@ -27,6 +29,11 @@ const Container = () => {
     audioUrl: string;
   } | null>(null);
   const { setQueue, setCurrentlyPlayingSong: setContextSong, setCurrentIndex: setContextIndex } = useMusic();
+  const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
+    isOpen: false,
+    songId: 0,
+    songTitle: '',
+  });
 
   // Lấy userId
   useEffect(() => {
@@ -255,7 +262,7 @@ const Container = () => {
               return (
                 <div 
                   key={song.song.id}
-                  className={`text-white w-[175px] h-[256px] hover:scale-[1.05] transition-transform duration-200 cursor-pointer ${isPlaying ? 'ring-2 ring-[#3BC8E7] rounded-[10px]' : ''}`}
+                  className={`text-white w-[175px] h-[256px] hover:scale-[1.05] transition-transform duration-200 cursor-pointer relative group ${isPlaying ? 'ring-2 ring-[#3BC8E7] rounded-[10px]' : ''}`}
                   onClick={() => handleSongClick(song, allTimeSongs)}
                 >
                   <img
@@ -266,6 +273,20 @@ const Container = () => {
                       (e.target as HTMLImageElement).src = "./Toptracks/sing1.jpg";
                     }}
                   />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCommentModal({
+                        isOpen: true,
+                        songId: song.song.id,
+                        songTitle: song.song.title,
+                      });
+                    }}
+                    className="absolute top-2 right-2 bg-[#3BC8E7] text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Xem bình luận"
+                  >
+                    <FaComment size={14} />
+                  </button>
                   <h3 className="font-semibold mb-1">
                     <span className="hover:text-[#3BC8E7] transition">
                       {song.song.title}
@@ -505,6 +526,14 @@ const Container = () => {
       </div>
 
       <MusicPlayerBar song={currentlyPlayingSong} />
+
+      {/* Comment Modal */}
+      <CommentModal
+        isOpen={commentModal.isOpen}
+        onClose={() => setCommentModal({ isOpen: false, songId: 0, songTitle: '' })}
+        songId={commentModal.songId}
+        songTitle={commentModal.songTitle}
+      />
     </>
   );
 };

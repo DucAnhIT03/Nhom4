@@ -3,9 +3,13 @@ import {
   LayoutDashboard, Music, UploadCloud, LogOut, User,
   PlayCircle, Disc, Search, Trash2, Edit, Plus,
   Image as ImageIcon, Calendar, CheckCircle2, X, Save, ListMusic,
-  Loader2, FolderOpen, Home, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat
+  Loader2, FolderOpen, Home, Play,
+  MessageSquare
 } from "lucide-react";
 import MyAlbumsTab from "../components/ArtistMyContent/MyAlbumsTab";
+import CommentManagementTab from "../components/ArtistMyContent/CommentManagementTab";
+import MusicPlayerBar from "../components/HomePage/MusicPlayerBar";
+import { useMusic } from "../contexts/MusicContext";
 import { 
   getMyAlbums, 
   createMyAlbum, 
@@ -75,6 +79,7 @@ interface Song {
   coverImage?: string;  
   cover?: string;       
   audioUrl?: string; 
+  fileUrl?: string;
   artist?: string; 
   description?: string; 
 }
@@ -179,10 +184,13 @@ const apiService = {
 const ArtistDashboard = () => {
   // Đọc tab từ URL query parameter
   const urlParams = new URLSearchParams(window.location.search);
-  const tabFromUrl = urlParams.get("tab") as "dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings" | "my-content" | null;
-  const [activeTab, setActiveTab] = useState<"dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings" | "my-content">(tabFromUrl || "dashboard");
+  const tabFromUrl = urlParams.get("tab") as "dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings" | "my-content" | "comments" | null;
+  const [activeTab, setActiveTab] = useState<"dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings" | "my-content" | "comments">(tabFromUrl || "dashboard");
   const [artistName, setArtistName] = useState("Artist");
   const [avatar, setAvatar] = useState("https://cdn-icons-png.flaticon.com/512/3974/3974038.png");
+  
+  // Music player context
+  const { setCurrentlyPlayingSong, setQueue } = useMusic();
 
   const [songs, setSongs] = useState<Song[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -309,8 +317,8 @@ const ArtistDashboard = () => {
   useEffect(() => {
     const checkUrlTab = () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const tabFromUrl = urlParams.get("tab") as "dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings" | "my-content" | null;
-      if (tabFromUrl && ["dashboard", "songs", "albums", "playlists", "upload", "settings", "my-content"].includes(tabFromUrl)) {
+      const tabFromUrl = urlParams.get("tab") as "dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings" | "my-content" | "comments" | null;
+      if (tabFromUrl && ["dashboard", "songs", "albums", "playlists", "upload", "settings", "my-content", "comments"].includes(tabFromUrl)) {
         setActiveTab(tabFromUrl);
       }
     };
@@ -704,14 +712,50 @@ const ArtistDashboard = () => {
         description: song.description || "", 
         genre: genreName, 
         status: song.status, 
-        albumId: song.albumId || "", 
-        file: null, 
-        fileName: "", 
-        coverFile: null, 
-        coverPreview: song.coverImage || song.cover || "" 
+        albumId: song.albumId || "",
+        file: null,
+        fileName: "",
+        coverFile: null,
+        coverPreview: song.coverImage || song.cover || ""
     });
     setEditType("song");
     setIsEditModalOpen(true);
+  };
+
+  const handlePlaySong = (song: Song) => {
+    if (!song.audioUrl && !song.fileUrl) {
+      alert("Bài hát này chưa có file audio");
+      return;
+    }
+
+    const audioUrl = song.audioUrl || song.fileUrl || "";
+    const coverImage = song.coverImage || song.cover || "";
+
+    // Tạo song object cho MusicPlayerBar (theo interface của MusicContext)
+    const songForPlayer = {
+      title: song.title,
+      artist: song.artist || "Unknown Artist",
+      image: coverImage || "https://via.placeholder.com/300",
+      audioUrl: audioUrl,
+      id: typeof song.id === 'number' ? song.id : undefined,
+    };
+
+    // Set bài hát đang phát
+    setCurrentlyPlayingSong(songForPlayer);
+
+    // Set queue với tất cả bài hát có audioUrl để có thể next/previous
+    const songsWithAudio = songs
+      .filter(s => s.audioUrl || s.fileUrl)
+      .map(s => ({
+        title: s.title,
+        artist: s.artist || "Unknown Artist",
+        image: s.coverImage || s.cover || "https://via.placeholder.com/300",
+        audioUrl: s.audioUrl || s.fileUrl || "",
+        id: typeof s.id === 'number' ? s.id : undefined,
+      }))
+      .filter(s => s.audioUrl); // Chỉ lấy bài có audioUrl
+
+    setQueue(songsWithAudio);
   };
 
   const handleDeleteItem = async (type: 'songs'|'albums'|'playlists', id: number | string) => {
@@ -995,7 +1039,7 @@ const ArtistDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard": return <div className="space-y-6 animate-in fade-in duration-500"><h2 className="text-3xl font-bold text-white mb-6">Tổng quan</h2><div className="grid grid-cols-1 md:grid-cols-4 gap-6">{stats.map((stat, i) => (<div key={i} className="bg-[#1E2542] p-6 rounded-2xl shadow-lg border border-gray-700"><div className="flex items-center justify-between mb-4"><div className={`p-3 rounded-full bg-opacity-20 ${stat.color.replace('text', 'bg')} ${stat.color}`}>{stat.icon}</div></div><h3 className="text-3xl font-bold text-white mb-1">{stat.value}</h3><p className="text-gray-400 text-sm">{stat.label}</p></div>))}</div></div>;
-      case "songs": return <div className="animate-in fade-in duration-500"><div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold text-white">Thư viện nhạc ({songs.length})</h2><button onClick={() => { setSongForm({ title: "", artist: "", description: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", file: null, fileName: "", coverFile: null, coverPreview: "" }); setActiveTab("upload"); }} className="bg-[#3BC8E7] text-black px-4 py-2 rounded-full font-bold hover:bg-[#34b3ce] transition flex items-center gap-2"><Plus size={18} /> Đăng bài mới</button></div><div className="bg-[#1E2542] rounded-2xl overflow-hidden border border-gray-700"><table className="w-full text-left text-gray-300"><thead className="bg-[#151a30] text-gray-400 uppercase text-xs"><tr><th className="p-4">Tên bài hát</th><th className="p-4">Thể loại</th><th className="p-4">Album</th><th className="p-4">Trạng thái</th><th className="p-4 text-center">Hành động</th></tr></thead><tbody>{songs.map((song) => { const album = albums.find(a => String(a.id) === String(song.albumId)); const songGenre = genres.find(g => g.id === song.genreId); return (<tr key={song.id} className="border-b border-gray-700 hover:bg-[#252d4d] transition"><td className="p-4 font-medium text-white flex items-center gap-3"><div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800">{song.coverImage || song.cover ? <img src={song.coverImage || song.cover} alt={song.title} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">♫</div>}</div><div><div>{song.title}</div><div className="text-xs text-gray-500">{song.artist || "Nghệ sĩ"}</div></div></td><td className="p-4 text-sm text-gray-400">{songGenre ? <span className="px-2 py-1 rounded bg-[#3BC8E7]/20 text-[#3BC8E7]">{songGenre.genreName}</span> : <span className="text-gray-600 italic">-</span>}</td><td className="p-4 text-sm text-gray-400">{album ? <span className="flex items-center gap-1 text-[#3BC8E7]"><Disc size={14}/> {album.title}</span> : <span className="text-gray-600 italic">Single</span>}</td><td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${song.status === 'Public' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{song.status}</span></td><td className="p-4 flex justify-center gap-3"><button onClick={() => openEditSong(song)} className="text-gray-400 hover:text-[#3BC8E7]"><Edit size={18} /></button><button onClick={() => handleDeleteItem('songs', song.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button></td></tr>); })}</tbody></table></div></div>;
+      case "songs": return <div className="animate-in fade-in duration-500 pb-24"><div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold text-white">Thư viện nhạc ({songs.length})</h2><button onClick={() => { setSongForm({ title: "", artist: "", description: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", file: null, fileName: "", coverFile: null, coverPreview: "" }); setActiveTab("upload"); }} className="bg-[#3BC8E7] text-black px-4 py-2 rounded-full font-bold hover:bg-[#34b3ce] transition flex items-center gap-2"><Plus size={18} /> Đăng bài mới</button></div><div className="bg-[#1E2542] rounded-2xl overflow-hidden border border-gray-700"><table className="w-full text-left text-gray-300"><thead className="bg-[#151a30] text-gray-400 uppercase text-xs"><tr><th className="p-4">Tên bài hát</th><th className="p-4">Thể loại</th><th className="p-4">Album</th><th className="p-4">Trạng thái</th><th className="p-4 text-center">Hành động</th></tr></thead><tbody>{songs.map((song) => { const album = albums.find(a => String(a.id) === String(song.albumId)); const songGenre = genres.find(g => g.id === song.genreId); const hasAudio = song.audioUrl || song.fileUrl; return (<tr key={song.id} className="border-b border-gray-700 hover:bg-[#252d4d] transition"><td className="p-4 font-medium text-white flex items-center gap-3"><div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800">{song.coverImage || song.cover ? <img src={song.coverImage || song.cover} alt={song.title} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">♫</div>}</div><div className="flex items-center gap-3 flex-1"><div><div>{song.title}</div><div className="text-xs text-gray-500">{song.artist || "Nghệ sĩ"}</div></div>{hasAudio && <button onClick={(e) => { e.stopPropagation(); handlePlaySong(song); }} className="w-8 h-8 rounded-full bg-[#3BC8E7]/20 hover:bg-[#3BC8E7]/30 flex items-center justify-center text-[#3BC8E7] transition hover:scale-110" title="Phát nhạc"><Play size={16} fill="currentColor" /></button>}</div></td><td className="p-4 text-sm text-gray-400">{songGenre ? <span className="px-2 py-1 rounded bg-[#3BC8E7]/20 text-[#3BC8E7]">{songGenre.genreName}</span> : <span className="text-gray-600 italic">-</span>}</td><td className="p-4 text-sm text-gray-400">{album ? <span className="flex items-center gap-1 text-[#3BC8E7]"><Disc size={14}/> {album.title}</span> : <span className="text-gray-600 italic">Single</span>}</td><td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${song.status === 'Public' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{song.status}</span></td><td className="p-4 flex justify-center gap-3"><button onClick={() => openEditSong(song)} className="text-gray-400 hover:text-[#3BC8E7]"><Edit size={18} /></button><button onClick={() => handleDeleteItem('songs', song.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button></td></tr>); })}</tbody></table></div></div>;
       
       // --- TAB UPLOAD ---
       case "upload": return (
@@ -1243,6 +1287,7 @@ const ArtistDashboard = () => {
       );
 
       case "my-content": return <MyAlbumsTab />;
+      case "comments": return <CommentManagementTab />;
       default: return null;
     }
   };
@@ -1257,11 +1302,13 @@ const ArtistDashboard = () => {
             <SidebarItem icon={<FolderOpen size={20} />} label="Đăng tải của tôi" active={activeTab === "my-content"} onClick={() => setActiveTab("my-content")} />
             <SidebarItem icon={<Music size={20} />} label="Bài hát" active={activeTab === "songs"} onClick={() => setActiveTab("songs")} />
             <SidebarItem icon={<Disc size={20} />} label="Albums" active={activeTab === "albums"} onClick={() => {setActiveTab("albums"); setIsCreatingAlbum(false)}} />
+            <SidebarItem icon={<MessageSquare size={20} />} label="Bình luận" active={activeTab === "comments"} onClick={() => setActiveTab("comments")} />
         </nav>
         <div className="p-4 border-t border-gray-800"><div className="flex items-center gap-3 mb-4"><img src={avatar || "https://cdn-icons-png.flaticon.com/512/3974/3974038.png"} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-[#3BC8E7]" /><div className="overflow-hidden"><p className="text-sm font-bold text-white truncate">{artistName}</p><p className="text-xs text-[#3BC8E7]">Artist Account</p></div></div><button onClick={handleLogout} className="flex items-center gap-2 text-gray-400 hover:text-white transition w-full px-2 py-2 rounded-lg hover:bg-white/5"><LogOut size={18} /><span>Đăng xuất</span></button></div>
       </aside>
       <main className="flex-1 p-8 overflow-y-auto relative"><div className="md:hidden flex justify-between items-center mb-8"><h1 className="text-xl font-bold">ARTIST HUB</h1><button className="p-2 bg-[#1B2039] rounded"><User/></button></div>{renderContent()}</main>
       {renderEditModal()}
+      <MusicPlayerBar song={null} />
     </div>
   );
 };
