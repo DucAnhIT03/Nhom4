@@ -25,6 +25,7 @@ const AlbumDetail = lazy(() => import("./pages/AlbumDetail.tsx"));
 const Downloads = lazy(() => import("./pages/Dowloads.tsx"));
 const Favourites = lazy(() => import("./pages/Favourites.tsx"));
 const History = lazy(() => import("./pages/History.tsx"));
+const Playlist = lazy(() => import("./pages/Playlist.tsx"));
 
 // 5. ARTIST PAGES (MỚI THÊM)
 // Đây là trang đích sau khi đăng nhập với role Artist
@@ -81,6 +82,10 @@ const router = createBrowserRouter([
   {
     path: "history",
     element: <History />,
+  },
+  {
+    path: "playlist",
+    element: <Playlist />,
   },
 
   // === ARTIST ROUTES (MỚI THÊM) ===

@@ -32,6 +32,22 @@ export class UserLibraryController {
   getHistory(@Param("userId", ParseIntPipe) userId: number) {
     return this.userLibraryService.getHistory(userId);
   }
+
+  @ApiOperation({ summary: "Lấy danh sách bài hát nghe nhiều nhất của user (playlist)" })
+  @Get("most-played/:userId")
+  getMostPlayedSongs(
+    @Param("userId", ParseIntPipe) userId: number,
+  ) {
+    return this.userLibraryService.getMostPlayedSongs(userId);
+  }
+
+  @ApiOperation({ summary: "Lấy danh sách bài hát phổ biến của các thể loại mà user hay nghe" })
+  @Get("favorite-genres-popular/:userId")
+  getUserFavoriteGenresPopularSongs(
+    @Param("userId", ParseIntPipe) userId: number,
+  ) {
+    return this.userLibraryService.getUserFavoriteGenresPopularSongs(userId);
+  }
 }
 
 

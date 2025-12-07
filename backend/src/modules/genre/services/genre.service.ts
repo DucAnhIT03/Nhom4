@@ -77,12 +77,23 @@ export class GenreService {
   }
 
   async getGenresOfSong(songId: number): Promise<Genre[]> {
+    // Lấy genres từ bảng song_genre
     const links = await this.songGenreRepository.find({ where: { songId } });
-    if (links.length === 0) {
+    const genreIdsFromLinks = links.map((l) => l.genreId);
+    
+    // Lấy genreId từ song (nếu có) để tương thích ngược
+    const song = await this.songRepository.findOne({ where: { id: songId } });
+    const allGenreIds = new Set<number>(genreIdsFromLinks);
+    
+    if (song && song.genreId) {
+      allGenreIds.add(song.genreId);
+    }
+    
+    if (allGenreIds.size === 0) {
       return [];
     }
-    const ids = links.map((l) => l.genreId);
-    return this.genreRepository.findBy({ id: In(ids) });
+    
+    return this.genreRepository.findBy({ id: In(Array.from(allGenreIds)) });
   }
 
   /**

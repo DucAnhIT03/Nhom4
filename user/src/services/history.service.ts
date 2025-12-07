@@ -62,3 +62,75 @@ export const addHistory = async (userId: number, songId: number): Promise<void> 
   );
 };
 
+export interface MostPlayedItem {
+  song: {
+    id: number;
+    title: string;
+    duration?: string;
+    artistId: number;
+    albumId?: number;
+    fileUrl?: string;
+    coverImage?: string;
+    views: number;
+    createdAt?: string;
+    updatedAt?: string;
+    artist?: {
+      id: number;
+      artistName: string;
+    };
+  };
+  playCount: number;
+}
+
+/**
+ * Lấy danh sách bài hát nghe nhiều nhất của user (playlist)
+ */
+export const getMostPlayedSongs = async (userId: number): Promise<MostPlayedItem[]> => {
+  const token = localStorage.getItem('token');
+  const response = await axios.get<MostPlayedItem[]>(
+    `${API_BASE_URL}/library/most-played/${userId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data;
+};
+
+export interface FavoriteGenresPopularItem {
+  song: {
+    id: number;
+    title: string;
+    duration?: string;
+    artistId: number;
+    albumId?: number;
+    fileUrl?: string;
+    coverImage?: string;
+    views: number;
+    createdAt?: string;
+    updatedAt?: string;
+    artist?: {
+      id: number;
+      artistName: string;
+    };
+  };
+  playCount: number;
+}
+
+/**
+ * Lấy danh sách bài hát phổ biến của các thể loại mà user hay nghe
+ */
+export const getFavoriteGenresPopularSongs = async (userId: number): Promise<FavoriteGenresPopularItem[]> => {
+  const token = localStorage.getItem('token');
+  const response = await axios.get<FavoriteGenresPopularItem[]>(
+    `${API_BASE_URL}/library/favorite-genres-popular/${userId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data;
+};
+

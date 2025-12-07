@@ -4,6 +4,7 @@ import { getCurrentUser } from "../../services/auth.service";
 import { getAlbumById } from "../../services/album.service";
 import { incrementSongViews } from "../../services/song.service";
 import MusicPlayerBar from "../HomePage/MusicPlayerBar";
+import { useMusic } from "../../contexts/MusicContext";
 
 interface HistoryItemWithAlbum extends HistoryItem {
   albumCover?: string;
@@ -20,6 +21,7 @@ const Container = () => {
     image: string;
     audioUrl: string;
   } | null>(null);
+  const { setQueue, setCurrentlyPlayingSong: setContextSong, setCurrentIndex } = useMusic();
 
   // Lấy userId
   useEffect(() => {
@@ -115,12 +117,33 @@ const Container = () => {
 
     // Set bài hát đang phát cho MusicPlayerBar
     const artistName = item.song.artist?.artistName || "Unknown Artist";
-    setCurrentlyPlayingSong({
+    const songData = {
       title: item.song.title,
       artist: artistName,
       image: item.albumCover || "./History/s1.jpg",
       audioUrl: item.song.fileUrl,
-    });
+      id: item.song.id,
+    };
+    
+    setCurrentlyPlayingSong(songData);
+    setContextSong(songData);
+
+    // Set queue với tất cả bài hát trong history để tự động chuyển bài khi hết
+    const queue = historyItems.map(i => ({
+      title: i.song.title,
+      artist: i.song.artist?.artistName || "Unknown Artist",
+      image: i.albumCover || "./History/s1.jpg",
+      audioUrl: i.song.fileUrl || "",
+      id: i.song.id,
+    })).filter(s => s.audioUrl);
+    
+    // Tìm index của bài hát được click
+    const index = queue.findIndex(s => 
+      s.audioUrl === songData.audioUrl || (s.id && songData.id && s.id === songData.id)
+    );
+    
+    setQueue(queue);
+    setCurrentIndex(index !== -1 ? index : 0);
 
     // Tăng lượt nghe và thêm vào history
     try {

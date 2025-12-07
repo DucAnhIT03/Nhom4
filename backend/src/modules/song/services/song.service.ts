@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Inject, forwardRef } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Between, Repository } from "typeorm";
+import { Between, In, Repository } from "typeorm";
 import { Song } from "../../../shared/schemas/song.schema";
 import { SongHistory } from "../../../shared/schemas/song-history.schema";
 import { CreateSongDto } from "../dtos/request/create-song.dto";
@@ -86,7 +86,41 @@ export class SongService {
     }
 
     const songIds = rows.map((r) => r.songId);
-    const songs = await this.songRepository.findByIds(songIds);
+    const songs = await this.songRepository.find({
+      where: { id: In(songIds) },
+      relations: ["artist"],
+    });
+
+    // Map theo đúng thứ tự playCount
+    return rows.map((row) => ({
+      song: songs.find((s) => s.id === Number(row.songId))!,
+      playCount: Number(row.playCount),
+    }));
+  }
+
+  /**
+   * Lấy top track của tất cả thời gian (all time) dựa trên tổng lượt nghe từ tất cả users.
+   * Mặc định trả về top 50.
+   */
+  async getTopTracksOfAllTime(limit = 50): Promise<Array<{ song: Song; playCount: number }>> {
+    const rows = await this.songHistoryRepository
+      .createQueryBuilder("history")
+      .select("history.songId", "songId")
+      .addSelect("COUNT(*)", "playCount")
+      .groupBy("history.songId")
+      .orderBy("COUNT(*)", "DESC")
+      .limit(limit)
+      .getRawMany<{ songId: number; playCount: string }>();
+
+    if (!rows.length) {
+      return [];
+    }
+
+    const songIds = rows.map((r) => r.songId);
+    const songs = await this.songRepository.find({
+      where: { id: In(songIds) },
+      relations: ["artist"],
+    });
 
     // Map theo đúng thứ tự playCount
     return rows.map((row) => ({

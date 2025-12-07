@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
+import { Injectable, NotFoundException, ForbiddenException, Inject, forwardRef } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Like } from "typeorm";
 import { Artist } from "../../../shared/schemas/artist.schema";
 import { User } from "../../../shared/schemas/user.schema";
 import { Album } from "../../../shared/schemas/album.schema";
 import { Song } from "../../../shared/schemas/song.schema";
+import { SongGenre } from "../../../shared/schemas/song-genre.schema";
 import { CreateAlbumDto } from "../../album/dtos/request/create-album.dto";
 import { UpdateAlbumDto } from "../../album/dtos/request/update-album.dto";
 import { CreateArtistAlbumDto } from "../dtos/request/create-artist-album.dto";
@@ -25,6 +26,8 @@ export class ArtistMyContentService {
     private readonly albumRepository: Repository<Album>,
     @InjectRepository(Song)
     private readonly songRepository: Repository<Song>,
+    @InjectRepository(SongGenre)
+    private readonly songGenreRepository: Repository<SongGenre>,
   ) {}
 
   /**
@@ -240,7 +243,24 @@ export class ArtistMyContentService {
       artistId: artist.id,
     });
 
-    return this.songRepository.save(song);
+    const savedSong = await this.songRepository.save(song);
+
+    // Tự động sync genreId vào bảng song_genre nếu có
+    if (dto.genreId) {
+      const existingLink = await this.songGenreRepository.findOne({
+        where: { songId: savedSong.id, genreId: dto.genreId },
+      });
+      
+      if (!existingLink) {
+        const songGenre = this.songGenreRepository.create({
+          songId: savedSong.id,
+          genreId: dto.genreId,
+        });
+        await this.songGenreRepository.save(songGenre);
+      }
+    }
+
+    return savedSong;
   }
 
   /**
@@ -256,7 +276,24 @@ export class ArtistMyContentService {
       albumId,
     });
 
-    return this.songRepository.save(song);
+    const savedSong = await this.songRepository.save(song);
+
+    // Tự động sync genreId vào bảng song_genre nếu có
+    if (dto.genreId) {
+      const existingLink = await this.songGenreRepository.findOne({
+        where: { songId: savedSong.id, genreId: dto.genreId },
+      });
+      
+      if (!existingLink) {
+        const songGenre = this.songGenreRepository.create({
+          songId: savedSong.id,
+          genreId: dto.genreId,
+        });
+        await this.songGenreRepository.save(songGenre);
+      }
+    }
+
+    return savedSong;
   }
 
   /**
@@ -272,7 +309,30 @@ export class ArtistMyContentService {
     }
 
     const merged = this.songRepository.merge(song, dto);
-    return this.songRepository.save(merged);
+    const savedSong = await this.songRepository.save(merged);
+
+    // Tự động sync genreId vào bảng song_genre nếu có
+    if (dto.genreId !== undefined) {
+      if (dto.genreId) {
+        // Nếu có genreId, thêm vào bảng song_genre nếu chưa có
+        const existingLink = await this.songGenreRepository.findOne({
+          where: { songId: savedSong.id, genreId: dto.genreId },
+        });
+        
+        if (!existingLink) {
+          const songGenre = this.songGenreRepository.create({
+            songId: savedSong.id,
+            genreId: dto.genreId,
+          });
+          await this.songGenreRepository.save(songGenre);
+        }
+      } else {
+        // Nếu genreId là null/undefined, không xóa các genres khác trong song_genre
+        // (chỉ cập nhật field genreId của song)
+      }
+    }
+
+    return savedSong;
   }
 
   /**

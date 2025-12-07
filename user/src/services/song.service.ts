@@ -89,3 +89,30 @@ export const getNewReleases = async (limit?: number): Promise<Song[]> => {
   }
 };
 
+export interface TrendingSong {
+  song: Song;
+  playCount: number;
+}
+
+export const getWeeklyTopTracks = async (limit?: number): Promise<TrendingSong[]> => {
+  try {
+    const params = limit ? { limit } : {};
+    const response = await axios.get<TrendingSong[]>(`${API_BASE_URL}/songs/top/week`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching weekly top tracks:', error);
+    return [];
+  }
+};
+
+export const getTopTracksOfAllTime = async (limit?: number): Promise<TrendingSong[]> => {
+  try {
+    const params = limit ? { limit } : {};
+    const response = await axios.get<TrendingSong[]>(`${API_BASE_URL}/songs/top/all-time`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching top tracks of all time:', error);
+    return [];
+  }
+};
+

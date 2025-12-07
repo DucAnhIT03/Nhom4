@@ -7,6 +7,7 @@ import {
   IoShuffleOutline,
   IoRepeatOutline,
 } from "react-icons/io5";
+import { useMusic } from "../../contexts/MusicContext";
 
 interface CustomAudioPlayerProps {
   src: string;
@@ -23,9 +24,28 @@ const formatTime = (time: number) => {
 
 const CustomAudioPlayer = ({ src, onPlay, className = "" }: CustomAudioPlayerProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { stopAllAudio, registerAudio, unregisterAudio, currentlyPlayingSong } = useMusic();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  // Đăng ký audio element và dừng khi có bài mới được phát từ MusicPlayerBar
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      registerAudio(audio);
+      
+      // Nếu có bài mới được phát từ MusicPlayerBar, dừng audio này
+      if (currentlyPlayingSong && currentlyPlayingSong.audioUrl !== src) {
+        audio.pause();
+        setIsPlaying(false);
+      }
+      
+      return () => {
+        unregisterAudio(audio);
+      };
+    }
+  }, [src, currentlyPlayingSong, registerAudio, unregisterAudio]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -61,6 +81,8 @@ const CustomAudioPlayer = ({ src, onPlay, className = "" }: CustomAudioPlayerPro
     if (isPlaying) {
       audio.pause();
     } else {
+      // Dừng tất cả audio khác trước khi phát
+      stopAllAudio(audio);
       audio.play();
       if (onPlay) onPlay();
     }

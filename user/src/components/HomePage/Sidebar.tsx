@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"; // Thêm useEffect và useCallback
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   FaHome,
   FaCopy,
@@ -12,12 +12,14 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaFolderOpen, // Icon cho "Đăng tải của tôi"
+  FaMusic, // Icon cho Playlist
 } from "react-icons/fa";
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [userRole, setUserRole] = useState("user"); // State lưu role
   const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -92,6 +94,7 @@ const Sidebar = () => {
     { icon: <FaDownload />, label: "Downloads", path: "/dowload" },
     { icon: <FaHeart />, label: "Favourites", path: "/favorite" },
     { icon: <FaClock />, label: "History", path: "/history" },
+    { icon: <FaMusic />, label: "Playlist", path: "/playlist" },
   ];
 
   // 3. Tạo danh sách items cuối cùng dựa trên role
@@ -141,17 +144,45 @@ const Sidebar = () => {
       {/* Main Menu */}
       {/* Thêm overflow-y-auto để nếu menu dài quá thì cuộn được */}
       <nav className="flex flex-col gap-3 mb-[20px] overflow-y-auto no-scrollbar">
-        {allItems.map((item, index) => (
-          <button
-            key={index}
-            onClick={() => navigate(item.path)}
-            // Thêm điều kiện logic style: Nếu là Dashboard thì background khác một chút để nổi bật
-            className="flex items-center gap-3 w-full px-5 py-2 text-white transition-colors duration-200 hover:bg-[#2CC8E5]"
-          >
-            <span className="text-lg">{item.icon}</span>
-            {isOpen && <span className="text-sm whitespace-nowrap">{item.label}</span>}
-          </button>
-        ))}
+        {allItems.map((item, index) => {
+          // Kiểm tra xem route hiện tại có match với path của item không
+          const isActive = (() => {
+            const currentPath = location.pathname;
+            const itemPath = item.path.split('?')[0]; // Lấy path không có query string
+            
+            // Nếu là trang chủ
+            if (itemPath === '/' && currentPath === '/') {
+              return true;
+            }
+            
+            // Nếu không phải trang chủ, kiểm tra currentPath có bắt đầu bằng itemPath không
+            if (itemPath !== '/' && currentPath.startsWith(itemPath)) {
+              return true;
+            }
+            
+            // Xử lý đặc biệt cho artist dashboard
+            if (item.path.includes('/artist/dashboard')) {
+              return currentPath.includes('/artist/dashboard');
+            }
+            
+            return false;
+          })();
+          
+          return (
+            <button
+              key={index}
+              onClick={() => navigate(item.path)}
+              className={`flex items-center gap-3 w-full px-5 py-2 transition-colors duration-200 ${
+                isActive
+                  ? 'bg-[#3BC8E7] text-white'
+                  : 'text-white hover:bg-[#2CC8E5]'
+              }`}
+            >
+              <span className="text-lg">{item.icon}</span>
+              {isOpen && <span className="text-sm whitespace-nowrap">{item.label}</span>}
+            </button>
+          );
+        })}
       </nav>
     </div>
   );

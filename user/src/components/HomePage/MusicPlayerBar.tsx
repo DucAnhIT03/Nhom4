@@ -30,30 +30,65 @@ const formatTime = (time: number) => {
   return `${m}:${s < 10 ? "0" : ""}${s}`;
 };
 
-const MusicPlayerBar = ({ song }: MusicPlayerBarProps) => {
+const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const {
+    currentlyPlayingSong: contextSong,
     isShuffle,
     setIsShuffle,
     repeatMode,
     setRepeatMode,
     playNext,
     playPrevious,
+    stopAllAudio,
+    registerAudio,
+    unregisterAudio,
   } = useMusic();
+
+  // Ưu tiên sử dụng song từ context, nếu không có thì dùng từ props
+  const song = contextSong || songProp;
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
+  const isDraggingRef = useRef(false);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  // Đăng ký audio element khi mount
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      registerAudio(audio);
+      return () => {
+        unregisterAudio(audio);
+      };
+    }
+  }, [registerAudio, unregisterAudio]);
+
   // Load bài mới + auto play
   useEffect(() => {
-    if (!song) return;
+    if (!song || !song.audioUrl) return;
 
     const audio = audioRef.current;
     if (!audio) return;
+
+    // Dừng tất cả audio khác trước khi phát bài mới
+    stopAllAudio(audio);
+
+    // Nếu đang phát cùng một bài thì không reload (tránh reload không cần thiết)
+    const currentSrc = audio.src || '';
+    const newSrc = song.audioUrl;
+    
+    // So sánh URL đơn giản - chỉ reload nếu URL thay đổi
+    if (currentSrc && currentSrc === newSrc) {
+      // Nếu đang phát cùng bài, chỉ cập nhật volume nếu cần
+      if (audio.volume !== volume) {
+        audio.volume = volume;
+      }
+      return;
+    }
 
     // Reset state
     setCurrentTime(0);
@@ -68,9 +103,11 @@ const MusicPlayerBar = ({ song }: MusicPlayerBarProps) => {
       setDuration(audio.duration);
     };
 
-    // Update current time
+    // Update current time (chỉ khi không đang kéo)
     const updateTime = () => {
-      setCurrentTime(audio.currentTime);
+      if (!isDraggingRef.current) {
+        setCurrentTime(audio.currentTime);
+      }
     };
 
     // Handle play/pause state
@@ -80,12 +117,16 @@ const MusicPlayerBar = ({ song }: MusicPlayerBarProps) => {
       setIsPlaying(false);
       setCurrentTime(0);
       // Tự động chuyển bài tiếp theo khi hết
-      if (repeatMode !== 'one') {
-        playNext();
-      } else {
+      if (repeatMode === 'one') {
         // Lặp lại bài hiện tại
         audio.currentTime = 0;
-        audio.play();
+        audio.play().catch(console.error);
+      } else {
+        // Chuyển sang bài tiếp theo
+        // Sử dụng setTimeout để đảm bảo state đã được cập nhật
+        setTimeout(() => {
+          playNext();
+        }, 100);
       }
     };
 
@@ -109,23 +150,33 @@ const MusicPlayerBar = ({ song }: MusicPlayerBarProps) => {
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [song, volume]);
+  }, [song, volume, repeatMode, playNext, stopAllAudio]);
 
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isPlaying) audio.pause();
-    else audio.play();
-
-    setIsPlaying(!isPlaying);
+    try {
+      if (isPlaying) {
+        audio.pause();
+        // setIsPlaying sẽ được cập nhật bởi event listener 'pause'
+      } else {
+        await audio.play();
+        // setIsPlaying sẽ được cập nhật bởi event listener 'play'
+      }
+    } catch (error) {
+      console.error("Lỗi khi play/pause:", error);
+      setIsPlaying(false);
+    }
   };
 
-  const handleProgressChange = (e: any) => {
+  const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = Number(e.target.value);
     const audio = audioRef.current;
 
-    if (!audio) return;
+    if (!audio || !audio.src) return;
+    
+    // Cập nhật thời gian của audio
     audio.currentTime = time;
     setCurrentTime(time);
   };
@@ -231,9 +282,21 @@ const MusicPlayerBar = ({ song }: MusicPlayerBarProps) => {
               type="range"
               min={0}
               max={duration || 0}
+              step={0.1}
               value={currentTime}
               onChange={handleProgressChange}
-              className="w-full accent-[#3BC8E7]"
+              onMouseDown={() => {
+                isDraggingRef.current = true;
+              }}
+              onMouseUp={() => {
+                isDraggingRef.current = false;
+                // Tiếp tục phát sau khi thả chuột nếu đang phát
+                const audio = audioRef.current;
+                if (audio && isPlaying) {
+                  audio.play().catch(console.error);
+                }
+              }}
+              className="w-full accent-[#3BC8E7] cursor-pointer"
             />
 
             <span className="text-xs">{formatTime(duration)}</span>

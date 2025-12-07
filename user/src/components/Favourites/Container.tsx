@@ -6,11 +6,18 @@ import { getWishlist, toggleWishlist, type WishlistItem } from "../../services/w
 import { getCurrentUser } from "../../services/auth.service";
 import { getAlbumById } from "../../services/album.service";
 import { incrementSongViews } from "../../services/song.service";
-import { addHistory } from "../../services/history.service";
+import { addHistory, getHistory, type HistoryItem } from "../../services/history.service";
 import CustomAudioPlayer from "../../shared/components/CustomAudioPlayer";
+import { useMusic } from "../../contexts/MusicContext";
+import MusicPlayerBar from "../HomePage/MusicPlayerBar";
 
 interface SongWithAlbum extends WishlistItem {
   albumName?: string;
+}
+
+interface HistoryItemWithAlbum extends HistoryItem {
+  albumCover?: string;
+  albumTitle?: string;
 }
 
 const Container = () => {
@@ -18,6 +25,15 @@ const Container = () => {
   const [songs, setSongs] = useState<SongWithAlbum[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
+  const [recentlyPlayed, setRecentlyPlayed] = useState<HistoryItemWithAlbum[]>([]);
+  const [recentlyPlayedIndex, setRecentlyPlayedIndex] = useState(0);
+  const [currentlyPlayingSong, setCurrentlyPlayingSong] = useState<{
+    title: string;
+    artist: string;
+    image: string;
+    audioUrl: string;
+  } | null>(null);
+  const { setQueue, setCurrentlyPlayingSong: setContextSong, setCurrentIndex: setContextIndex } = useMusic();
 
   // Lấy userId
   useEffect(() => {
@@ -85,6 +101,55 @@ const Container = () => {
     loadWishlist();
   }, [userId]);
 
+  // Load Recently Played
+  useEffect(() => {
+    const loadRecentlyPlayed = async () => {
+      if (!userId) {
+        return;
+      }
+
+      try {
+        const historyData = await getHistory(userId);
+        
+        // Lấy 6 bài hát gần nhất (hoặc tất cả nếu ít hơn 6)
+        const recentHistory = historyData.slice(0, 6);
+        
+        // Load album info cho mỗi bài hát
+        const historyWithAlbum = await Promise.all(
+          recentHistory.map(async (item) => {
+            let albumCover = "./Featured Albums/Anh1.png";
+            let albumTitle = "";
+            
+            if (item.song.albumId) {
+              try {
+                const album = await getAlbumById(item.song.albumId);
+                albumTitle = album.title;
+                if (album.coverImage) {
+                  albumCover = album.coverImage;
+                }
+              } catch (error) {
+                console.error(`Error loading album ${item.song.albumId}:`, error);
+              }
+            }
+            
+            return {
+              ...item,
+              albumCover,
+              albumTitle,
+            };
+          })
+        );
+
+        setRecentlyPlayed(historyWithAlbum);
+      } catch (error) {
+        console.error("Lỗi không tải được recently played:", error);
+        setRecentlyPlayed([]);
+      }
+    };
+
+    loadRecentlyPlayed();
+  }, [userId]);
+
   const handleRemove = async (songId: number) => {
     if (!userId) {
       alert("Vui lòng đăng nhập");
@@ -100,6 +165,67 @@ const Container = () => {
       alert("Có lỗi xảy ra khi xóa bài hát");
     }
   };
+
+  const handleRecentlyPlayedClick = async (item: HistoryItemWithAlbum) => {
+    if (!item.song.fileUrl) {
+      alert("Bài hát này không có file audio");
+      return;
+    }
+
+    const artistName = item.song.artist?.artistName || "Unknown Artist";
+    const songData = {
+      title: item.song.title,
+      artist: artistName,
+      image: item.albumCover || "./Featured Albums/Anh1.png",
+      audioUrl: item.song.fileUrl,
+      id: item.song.id,
+    };
+    
+    setCurrentlyPlayingSong(songData);
+    setContextSong(songData);
+
+    // Set queue với tất cả bài hát trong recently played
+    const queue = recentlyPlayed.map(i => ({
+      title: i.song.title,
+      artist: i.song.artist?.artistName || "Unknown Artist",
+      image: i.albumCover || "./Featured Albums/Anh1.png",
+      audioUrl: i.song.fileUrl || "",
+      id: i.song.id,
+    })).filter(s => s.audioUrl);
+    
+    const index = queue.findIndex(s => 
+      s.audioUrl === songData.audioUrl || (s.id && songData.id && s.id === songData.id)
+    );
+    
+    setQueue(queue);
+    setContextIndex(index !== -1 ? index : 0);
+
+    // Tăng lượt nghe và thêm vào history
+    try {
+      await incrementSongViews(item.song.id);
+      if (userId) {
+        await addHistory(userId, item.song.id);
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật lượt nghe/history:", error);
+    }
+  };
+
+  const handleRecentlyPlayedPrev = () => {
+    if (recentlyPlayedIndex > 0) {
+      setRecentlyPlayedIndex(recentlyPlayedIndex - 1);
+    }
+  };
+
+  const handleRecentlyPlayedNext = () => {
+    const maxIndex = Math.max(0, recentlyPlayed.length - 6);
+    if (recentlyPlayedIndex < maxIndex) {
+      setRecentlyPlayedIndex(recentlyPlayedIndex + 1);
+    }
+  };
+
+  // Lấy 6 bài hát hiện tại để hiển thị
+  const visibleRecentlyPlayed = recentlyPlayed.slice(recentlyPlayedIndex, recentlyPlayedIndex + 6);
 
 
   const visibleSongs = showAll ? songs : songs.slice(0, 5);
@@ -212,7 +338,7 @@ const Container = () => {
         </div>
       )}
 
-      {/* --- RECENTLY PLAYED SECTION (giữ nguyên như cũ) --- */}
+      {/* --- RECENTLY PLAYED SECTION --- */}
       <div className="mt-[80px] mb-[60px]">
         <div className="flex justify-between items-center">
           <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">
@@ -223,38 +349,65 @@ const Container = () => {
           </span>
         </div>
 
-        <div className="flex gap-[30px] mt-[32px] ml-[120px] items-center">
-          <button className="text-white hover:text-[#3BC8E7] transition">
-            <FaChevronLeft />
-          </button>
-
-          {[
-            { src: "./Featured Albums/Anh1.png", title: "Dream Your Moments (Duet)" },
-            { src: "./Featured Albums/Anh2.png", title: "Until I Met You" },
-            { src: "./Featured Albums/Anh3.png", title: "Gimme Some Courage" },
-            { src: "./Featured Albums/Anh4.png", title: "Dark Alley Acoustic" },
-            { src: "./Featured Albums/Anh5.png", title: "Walking Promises" },
-            { src: "./Featured Albums/Anh6.png", title: "Desired Games" },
-          ].map((item, index) => (
-            <div
-              key={index}
-              className="text-white w-[175px] h-[256px] hover:scale-[1.05] transition-transform duration-200"
+        {recentlyPlayed.length === 0 ? (
+          <div className="text-center text-gray-400 py-20 mt-[32px]">
+            <p className="text-lg mb-2">Chưa có bài hát nào được phát gần đây</p>
+          </div>
+        ) : (
+          <div className="flex gap-[30px] mt-[32px] ml-[120px] items-center">
+            <button
+              onClick={handleRecentlyPlayedPrev}
+              disabled={recentlyPlayedIndex === 0}
+              className={`text-white ${recentlyPlayedIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#3BC8E7] transition'}`}
             >
-              <img
-                className="rounded-[10px] mb-[19.18px]"
-                src={item.src}
-                alt={item.title}
-              />
-              <h3 className="font-semibold mb-1">{item.title}</h3>
-              <h3 className="text-[#DEDEDE] h-[24px]">Ava Cornish & Brian Hill</h3>
-            </div>
-          ))}
+              <FaChevronLeft />
+            </button>
 
-          <button className="text-white hover:text-[#3BC8E7] transition">
-            <FaChevronRight />
-          </button>
-        </div>
+            {visibleRecentlyPlayed.map((item) => {
+              const artistName = item.song.artist?.artistName || "Unknown Artist";
+              const isPlaying = currentlyPlayingSong?.title === item.song.title;
+              
+              return (
+                <div
+                  key={item.song.id}
+                  className={`text-white w-[175px] h-[256px] hover:scale-[1.05] transition-transform duration-200 cursor-pointer ${isPlaying ? 'ring-2 ring-[#3BC8E7] rounded-[10px]' : ''}`}
+                  onClick={() => handleRecentlyPlayedClick(item)}
+                >
+                  <img
+                    className="rounded-[10px] mb-[19.18px] w-[175px] h-[175px] object-cover"
+                    src={item.albumCover || "./Featured Albums/Anh1.png"}
+                    alt={item.song.title}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "./Featured Albums/Anh1.png";
+                    }}
+                  />
+                  <h3 className="font-semibold mb-1">
+                    <span className="hover:text-[#3BC8E7] transition">
+                      {item.song.title}
+                    </span>
+                  </h3>
+                  <h3 className="text-[#DEDEDE] h-[24px]">{artistName}</h3>
+                </div>
+              );
+            })}
+
+            {/* Fill empty slots if less than 6 items */}
+            {visibleRecentlyPlayed.length < 6 && Array.from({ length: 6 - visibleRecentlyPlayed.length }).map((_, index) => (
+              <div key={`empty-${index}`} className="w-[175px] h-[256px]" />
+            ))}
+
+            <button
+              onClick={handleRecentlyPlayedNext}
+              disabled={recentlyPlayedIndex >= Math.max(0, recentlyPlayed.length - 6)}
+              className={`text-white ${recentlyPlayedIndex >= Math.max(0, recentlyPlayed.length - 6) ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#3BC8E7] transition'}`}
+            >
+              <FaChevronRight />
+            </button>
+          </div>
+        )}
       </div>
+
+      <MusicPlayerBar song={currentlyPlayingSong} />
     </div>
   );
 };

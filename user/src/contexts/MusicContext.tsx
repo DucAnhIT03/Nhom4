@@ -21,18 +21,43 @@ interface MusicContextType {
   setRepeatMode: (mode: 'off' | 'all' | 'one') => void;
   playNext: () => void;
   playPrevious: () => void;
+  stopAllAudio: (except?: HTMLAudioElement) => void;
+  registerAudio: (audio: HTMLAudioElement | null) => void;
+  unregisterAudio: (audio: HTMLAudioElement | null) => void;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
 
 export const MusicProvider = ({ children }: { children: ReactNode }) => {
-  const [currentlyPlayingSong, setCurrentlyPlayingSong] = useState<Song | null>(null);
+  const [currentlyPlayingSongState, setCurrentlyPlayingSongState] = useState<Song | null>(null);
   const [queue, setQueue] = useState<Song[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   const shuffledQueueRef = useRef<Song[]>([]);
   const originalQueueRef = useRef<Song[]>([]);
+  const audioElementsRef = useRef<Set<HTMLAudioElement>>(new Set());
+
+  // Dừng tất cả audio elements đang phát
+  const stopAllAudio = (except?: HTMLAudioElement) => {
+    audioElementsRef.current.forEach((audio) => {
+      if (audio && audio !== except && !audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+  };
+
+  // Wrapper cho setCurrentlyPlayingSong để tự động dừng audio khác
+  const setCurrentlyPlayingSong = (song: Song | null) => {
+    if (song) {
+      // Dừng tất cả audio khi chuyển sang bài mới
+      stopAllAudio();
+    }
+    setCurrentlyPlayingSongState(song);
+  };
+
+  const currentlyPlayingSong = currentlyPlayingSongState;
 
   const playNext = () => {
     if (queue.length === 0) {
@@ -139,6 +164,20 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Đăng ký audio element
+  const registerAudio = (audio: HTMLAudioElement | null) => {
+    if (audio) {
+      audioElementsRef.current.add(audio);
+    }
+  };
+
+  // Hủy đăng ký audio element
+  const unregisterAudio = (audio: HTMLAudioElement | null) => {
+    if (audio) {
+      audioElementsRef.current.delete(audio);
+    }
+  };
+
   return (
     <MusicContext.Provider value={{ 
       currentlyPlayingSong, 
@@ -153,6 +192,9 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
       setRepeatMode,
       playNext,
       playPrevious,
+      stopAllAudio,
+      registerAudio,
+      unregisterAudio,
     }}>
       {children}
     </MusicContext.Provider>

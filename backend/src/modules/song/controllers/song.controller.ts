@@ -51,6 +51,18 @@ export class SongController {
     return this.songService.getWeeklyTopTracks(parsedLimit);
   }
 
+  /**
+   * Top track của tất cả thời gian (all time).
+   * Query:
+   * - limit: số bài muốn lấy, mặc định 50
+   */
+  @ApiOperation({ summary: "Lấy top bài hát của tất cả thời gian (dựa trên tổng lượt nghe)" })
+  @Get("top/all-time")
+  getTopTracksOfAllTime(@Query("limit") limit?: string) {
+    const parsedLimit = limit ? Number(limit) : undefined;
+    return this.songService.getTopTracksOfAllTime(parsedLimit);
+  }
+
   @ApiOperation({ summary: "Lấy danh sách bài hát theo artist ID" })
   @Get("artist/:artistId")
   findByArtistId(@Param("artistId", ParseIntPipe) artistId: number) {

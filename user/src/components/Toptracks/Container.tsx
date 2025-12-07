@@ -1,497 +1,511 @@
-import { FaChevronRight } from "react-icons/fa";
-import { FaChevronLeft } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { FaChevronRight, FaChevronLeft } from "react-icons/fa";
 import { HiDotsHorizontal } from "react-icons/hi";
+import { getTopTracksOfAllTime, getWeeklyTopTracks, type TrendingSong, incrementSongViews } from "../../services/song.service";
+import { getAlbumById } from "../../services/album.service";
+import { addHistory } from "../../services/history.service";
+import { getCurrentUser } from "../../services/auth.service";
+import { useMusic } from "../../contexts/MusicContext";
+import MusicPlayerBar from "../HomePage/MusicPlayerBar";
+
+interface TrendingSongWithAlbum extends TrendingSong {
+  albumCover?: string;
+  albumTitle?: string;
+}
+
 const Container = () => {
+  const [allTimeSongs, setAllTimeSongs] = useState<TrendingSongWithAlbum[]>([]);
+  const [weeklyTop15, setWeeklyTop15] = useState<TrendingSongWithAlbum[]>([]);
+  const [trendingTracks, setTrendingTracks] = useState<TrendingSongWithAlbum[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [userId, setUserId] = useState<number | null>(null);
+  const [currentlyPlayingSong, setCurrentlyPlayingSong] = useState<{
+    title: string;
+    artist: string;
+    image: string;
+    audioUrl: string;
+  } | null>(null);
+  const { setQueue, setCurrentlyPlayingSong: setContextSong, setCurrentIndex: setContextIndex } = useMusic();
+
+  // Lấy userId
+  useEffect(() => {
+    const loadUserId = async () => {
+      const storedUserId = localStorage.getItem('userId');
+      const token = localStorage.getItem('token');
+      
+      if (storedUserId) {
+        setUserId(parseInt(storedUserId));
+      } else if (token) {
+        try {
+          const user = await getCurrentUser();
+          if (user.id) {
+            setUserId(user.id);
+            localStorage.setItem('userId', user.id.toString());
+          }
+        } catch (error) {
+          console.error("Lỗi không lấy được thông tin user:", error);
+        }
+      }
+    };
+    loadUserId();
+  }, []);
+
+  // Load Top Tracks Of All Time và Weekly Top 15
+  useEffect(() => {
+    const loadAllData = async () => {
+      try {
+        setLoading(true);
+        
+        // Load cả ba API song song
+        const [allTimeData, weeklyData, trendingData] = await Promise.all([
+          getTopTracksOfAllTime(50).catch(() => []),
+          getWeeklyTopTracks(15).catch(() => []),
+          getWeeklyTopTracks(4).catch(() => []), // Trending Tracks: top 4 bài hát tuần
+        ]);
+        
+        // Load album info cho all-time tracks
+        const allTimeWithAlbum = await Promise.all(
+          allTimeData.map(async (item) => {
+            let albumCover = "./Toptracks/sing1.jpg";
+            let albumTitle = "";
+            
+            if (item.song.albumId) {
+              try {
+                const album = await getAlbumById(item.song.albumId);
+                albumTitle = album.title;
+                if (album.coverImage) {
+                  albumCover = album.coverImage;
+                }
+              } catch (error) {
+                console.error(`Error loading album ${item.song.albumId}:`, error);
+              }
+            }
+            
+            return { ...item, albumCover, albumTitle };
+          })
+        );
+
+        // Load album info cho weekly top 15
+        const weeklyWithAlbum = await Promise.all(
+          weeklyData.map(async (item) => {
+            let albumCover = "./Weeklytop15/C1.jpg";
+            let albumTitle = "";
+            
+            if (item.song.albumId) {
+              try {
+                const album = await getAlbumById(item.song.albumId);
+                albumTitle = album.title;
+                if (album.coverImage) {
+                  albumCover = album.coverImage;
+                }
+              } catch (error) {
+                console.error(`Error loading album ${item.song.albumId}:`, error);
+              }
+            }
+            
+            return { ...item, albumCover, albumTitle };
+          })
+        );
+
+        // Load album info cho trending tracks
+        const trendingWithAlbum = await Promise.all(
+          trendingData.map(async (item) => {
+            let albumCover = "./TrendingTrack/D1.png";
+            let albumTitle = "";
+            
+            if (item.song.albumId) {
+              try {
+                const album = await getAlbumById(item.song.albumId);
+                albumTitle = album.title;
+                if (album.coverImage) {
+                  albumCover = album.coverImage;
+                }
+              } catch (error) {
+                console.error(`Error loading album ${item.song.albumId}:`, error);
+              }
+            }
+            
+            return { ...item, albumCover, albumTitle };
+          })
+        );
+
+        setAllTimeSongs(allTimeWithAlbum);
+        setWeeklyTop15(weeklyWithAlbum);
+        setTrendingTracks(trendingWithAlbum);
+      } catch (error) {
+        console.error("Lỗi không tải được top tracks:", error);
+        setAllTimeSongs([]);
+        setWeeklyTop15([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAllData();
+  }, []);
+
+  const formatDuration = (seconds?: number): string => {
+    if (!seconds) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatRank = (index: number): string => {
+    return (index + 1).toString().padStart(2, '0');
+  };
+
+  const handleSongClick = async (song: TrendingSongWithAlbum, sourceList: TrendingSongWithAlbum[]) => {
+    if (!song.song.fileUrl) {
+      alert("Bài hát này không có file audio");
+      return;
+    }
+
+    const artistName = song.song.artist?.artistName || "Unknown Artist";
+    const songData = {
+      title: song.song.title,
+      artist: artistName,
+      image: song.albumCover || "./Toptracks/sing1.jpg",
+      audioUrl: song.song.fileUrl,
+      id: song.song.id,
+    };
+    
+    setCurrentlyPlayingSong(songData);
+    setContextSong(songData);
+
+    // Set queue với tất cả bài hát từ sourceList
+    const queue = sourceList.map(i => ({
+      title: i.song.title,
+      artist: i.song.artist?.artistName || "Unknown Artist",
+      image: i.albumCover || "./Toptracks/sing1.jpg",
+      audioUrl: i.song.fileUrl || "",
+      id: i.song.id,
+    })).filter(s => s.audioUrl);
+    
+    const index = queue.findIndex(s => 
+      s.audioUrl === songData.audioUrl || (s.id && songData.id && s.id === songData.id)
+    );
+    
+    setQueue(queue);
+    setContextIndex(index !== -1 ? index : 0);
+
+    // Tăng lượt nghe và thêm vào history
+    try {
+      await incrementSongViews(song.song.id);
+      if (userId) {
+        await addHistory(userId, song.song.id);
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật lượt nghe/history:", error);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  const handleNext = () => {
+    const maxIndex = Math.max(0, allTimeSongs.length - 6);
+    if (currentIndex < maxIndex) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  // Lấy 6 bài hát hiện tại để hiển thị
+  const visibleSongs = allTimeSongs.slice(currentIndex, currentIndex + 6);
+
+  if (loading) {
+    return (
+      <div className="mt-[43px] flex justify-center items-center h-[400px]">
+        <span className="text-white text-lg">Đang tải...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="mt-[43px]">
-      <div className="flex justify-between mt-[-511px]">
-        <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold ">
-          Top Tracks Of All Time
-        </span>
-        <span className="mr-[165px] text-white text-[15px]">View more</span>
-      </div>
-
-      <div className="flex gap-[30px] mt-[32px] ml-[120px]">
-        <button className="text-white">
-          <FaChevronLeft />
-        </button>
-
-        <div className="text-white w-[175px] h-[256px]">
-          <img
-            className="rounded-[10px] mb-[19.18px] "
-            src="./Toptracks/sing1.jpg"
-            alt=""
-          />
-          <p></p>
-          <h3 className="font-semibold mb-1">
-            <a href="">Dream Your Moments (Duet)</a>
-          </h3>
-          <h3 className="text-[#DEDEDE] h-[24px]">Ava Cornish & Brian Hill</h3>
-        </div>
-
-        <div className="text-white w-[175px] h-[256px]">
-          <img
-            className="rounded-[10px] mb-[19.18px]"
-            src="./Toptracks/sing2.jpg"
-            alt=""
-          />
-          <h3 className="font-semibold mb-1">Until I Met You</h3>
-          <h3 className="text-[#DEDEDE]">Ava Cornish & Brian Hill</h3>
-        </div>
-
-        <div className="text-white w-[175px] h-[256px]">
-          <img
-            className="rounded-[10px] mb-[19.18px]"
-            src="./Toptracks/sing3.jpg"
-            alt=""
-          />
-          <h3 className="font-semibold mb-1">Gimme Some Courage</h3>
-          <h3 className="text-[#DEDEDE]">Ava Cornish & Brian Hill</h3>
-        </div>
-
-        <div className="text-white w-[175px] h-[256px]">
-          <img
-            className="rounded-[10px] mb-[19.18px]"
-            src="./Toptracks/sing4.jpg"
-            alt=""
-          />
-          <h3 className="font-semibold mb-1">Dark Alley Acoustic</h3>
-          <h3 className="text-[#DEDEDE]">Ava Cornish & Brian Hill</h3>
-        </div>
-
-        <div className="text-white w-[175px] h-[256px]">
-          <img
-            className="rounded-[10px] mb-[19.18px]"
-            src="./Toptracks/sing5.jpg"
-            alt=""
-          />
-          <h3 className="font-semibold mb-1">Walking Promises</h3>
-          <h3 className="text-[#DEDEDE]">Ava Cornish & Brian Hill</h3>
-        </div>
-
-        <div className="text-white w-[175px] h-[256px]">
-          <img
-            className="rounded-[10px] mb-[19.18px]"
-            src="./Toptracks/sing6.jpg"
-            alt=""
-          />
-          <h3 className="font-semibold mb-1 ">Desired Games</h3>
-          <h3 className="text-[#DEDEDE]">Ava Cornish & Brian Hill</h3>
-        </div>
-        <button className="text-white">
-          <FaChevronRight />
-        </button>
-      </div>
-
-      <div>
-        <div>
-<h3 className=" text-[#3BC8E7] w-[133px] h-[26px] ml-[160px] mt-[64px]">
-            Weekly Top 15
-          </h3>
-        </div>
-
-        <div className="flex">
-          <div className="ml-[160px] mt-[24px]  ">
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  01
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C1.jpg"
-                  alt=""
-                />
-                <span className="mr-[65.92px] text-[14px]">
-                  <h3 className="w-[99px] h-[20px] mb-[6.8px]">
-                    <a href="">Until I Met You</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  02
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C2.png"
-                  alt=""
-                />
-                <span className="mr-[50.92px] text-[14px]">
-                  <h3 className="w-[114px] h-[20px] mb-[6.8px]">
-                    <a href="">Walking Promises</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  03
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C3.png"
-                  alt=""
-                />
-                <span className="mr-[19.92px] text-[14px]">
-                  <h3 className="w-[145px] h-[20px] mb-[6.8px]">
-                    <a href="">Gimme Some Courage</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-<div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  04
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C4.png"
-                  alt=""
-                />
-                <span className="mr-[66.92px] text-[14px]">
-                  <h3 className="w-[98px] h-[20px] mb-[6.8px]">
-                    <a href="">Desired Games</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  05
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C5.png"
-                  alt=""
-                />
-                <span className="mr-[38.92px] text-[14px]">
-                  <h3 className="w-[126px] h-[20px] mb-[6.8px]">
-                    <a href="">Dark Alley Acoustic</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-          </div>
-
-          <div className="ml-[40px] mt-[24px]  ">
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  06
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C6.png"
-                  alt=""
-                />
-                <span className="mr-[51px] text-[14px]">
-                  <h3 className="w-[114px] h-[20px] mb-[6.8px]">
-                    <a href="">Walking Promises</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-07
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C7.png"
-                  alt=""
-                />
-                <span className="mr-[69px] text-[14px]">
-                  <h3 className="w-[96px] h-[20px] mb-[6.8px]">
-                    <a href="">Endless Things</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  08
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C8.png"
-                  alt=""
-                />
-                <span className="mr-[23px] text-[14px]">
-                  <h3 className="w-[142px] h-[20px] mb-[6.8px]">
-                    <a href="">Dream Your Moments</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  09
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C9.png"
-                  alt=""
-                />
-                <span className="mr-[66px] text-[14px]">
-                  <h3 className="w-[99px] h-[20px] mb-[6.8px]">
-                    <a href="">Until I Met You</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  10
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C10.png"
-                  alt=""
-                />
-                <span className="mr-[20px] text-[14px]">
-<h3 className="w-[145px] h-[20px] mb-[6.8px]">
-                    <a href="">Gimme Some Courage</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-          </div>
-
-          <div className="ml-[40px] mt-[24px]  ">
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  11
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C11.png"
-                  alt=""
-                />
-                <span className="mr-[35px] text-[14px]">
-                  <h3 className="w-[126px] h-[20px] mb-[6.8px]">
-                    <a href="">Dark Alley Acoustic</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  12
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C12.png"
-                  alt=""
-                />
-                <span className="mr-[25px] text-[14px]">
-                  <h3 className="w-[136px] h-[20px] mb-[6.8px]">
-                    <a href="">The Heartbeat Stops</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  13
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C13.png"
-                  alt=""
-                />
-                <span className="mr-[35px] text-[14px]">
-                  <h3 className="w-[127px] h-[20px] mb-[6.8px]">
-                    <a href="">One More Stranger</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-<h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  14
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C14.png"
-                  alt=""
-                />
-                <span className="mr-[48px] text-[14px]">
-                  <h3 className="w-[114px] h-[20px] mb-[6.8px]">
-                    <a href="">Walking Promises</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-
-            <div className="h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center">
-              <div className="flex text-white">
-                <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
-                  15
-                </h1>
-                <img
-                  className="w-[50px] h-[50px] rounded-[5px] mr-[20px]"
-                  src="./Weeklytop15/C15.png"
-                  alt=""
-                />
-                <span className="mr-[65.92px] text-[14px]">
-                  <h3 className="w-[96px] h-[20px] mb-[6.8px]">
-                    <a href="">Endless Things</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-                <HiDotsHorizontal className="ml-[24.08px]" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-[64px]">
-        <div className="flex justify-between">
+    <>
+      <div className="mt-[43px]">
+        <div className="flex justify-between mt-[-511px]">
           <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold ">
-            Trending Tracks
+            Top Tracks Of All Time
           </span>
           <span className="mr-[165px] text-white text-[15px]">View more</span>
         </div>
-        <div className="w-[1200px] h-[83px] ">
-          <div className="w-[1200px] h-[10px] ml-[160px] mt-[24px]">
-            <hr className="text-[#252B4DBF]" />
 
-            <div className="relative flex items-center ">
-              <div className="absolute w-[10px] h-[10px] left-[345.5px]  bg-[#3BC8E7] rounded-full">
-                <div className="absolute w-[6px] h-[6px] left-[2px] top-[2px] bg-[#14182A] rounded-full"></div>
+        <div className="flex gap-[30px] mt-[32px] ml-[120px] items-center">
+          <button 
+            onClick={handlePrev}
+            disabled={currentIndex === 0}
+            className={`text-white ${currentIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#3BC8E7] transition-colors'}`}
+          >
+            <FaChevronLeft />
+          </button>
+
+          {visibleSongs.length === 0 ? (
+            <div className="text-center text-gray-400 py-20 w-full">
+              <p className="text-lg mb-2">Chưa có bài hát nào</p>
+            </div>
+          ) : (
+            visibleSongs.map((song) => {
+              const artistName = song.song.artist?.artistName || "Unknown Artist";
+              const isPlaying = currentlyPlayingSong?.title === song.song.title;
+              return (
+                <div 
+                  key={song.song.id}
+                  className={`text-white w-[175px] h-[256px] hover:scale-[1.05] transition-transform duration-200 cursor-pointer ${isPlaying ? 'ring-2 ring-[#3BC8E7] rounded-[10px]' : ''}`}
+                  onClick={() => handleSongClick(song, allTimeSongs)}
+                >
+                  <img
+                    className="rounded-[10px] mb-[19.18px] w-[175px] h-[175px] object-cover"
+                    src={song.albumCover || "./Toptracks/sing1.jpg"}
+                    alt={song.song.title}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "./Toptracks/sing1.jpg";
+                    }}
+                  />
+                  <h3 className="font-semibold mb-1">
+                    <span className="hover:text-[#3BC8E7] transition">
+                      {song.song.title}
+                    </span>
+                  </h3>
+                  <h3 className="text-[#DEDEDE] h-[24px]">{artistName}</h3>
+                  {song.playCount && (
+                    <p className="text-[#3BC8E7] text-xs mt-1">
+                      {song.playCount} lần nghe
+                    </p>
+                  )}
+                </div>
+              );
+            })
+          )}
+
+          <button 
+            onClick={handleNext}
+            disabled={currentIndex >= Math.max(0, allTimeSongs.length - 6)}
+            className={`text-white ${currentIndex >= Math.max(0, allTimeSongs.length - 6) ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#3BC8E7] transition-colors'}`}
+          >
+            <FaChevronRight />
+          </button>
+        </div>
+
+        <div>
+          <div>
+            <h3 className=" text-[#3BC8E7] w-[133px] h-[26px] ml-[160px] mt-[64px]">
+              Weekly Top 15
+            </h3>
+          </div>
+
+          {weeklyTop15.length === 0 ? (
+            <div className="text-center text-gray-400 py-20 mt-[24px]">
+              <p className="text-lg mb-2">Chưa có bài hát nào</p>
+            </div>
+          ) : (
+            <div className="flex">
+              {/* Cột 1: Bài 1-5 */}
+              <div className="ml-[160px] mt-[24px]">
+                {weeklyTop15.slice(0, 5).map((song, index) => {
+                  const artistName = song.song.artist?.artistName || "Unknown Artist";
+                  const duration = song.song.duration ? parseFloat(song.song.duration) : undefined;
+                  const isPlaying = currentlyPlayingSong?.title === song.song.title;
+                  
+                  return (
+                    <div
+                      key={song.song.id}
+                      className={`h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center cursor-pointer hover:bg-[#1B2039] transition-colors ${isPlaying ? 'bg-[#1B2039]' : ''}`}
+                      onClick={() => handleSongClick(song, weeklyTop15)}
+                    >
+                      <div className="flex text-white">
+                        <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
+                          {formatRank(index)}
+                        </h1>
+                        <img
+                          className="w-[50px] h-[50px] rounded-[5px] mr-[20px] object-cover"
+                          src={song.albumCover || "./Weeklytop15/C1.jpg"}
+                          alt={song.song.title}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "./Weeklytop15/C1.jpg";
+                          }}
+                        />
+                        <span className="mr-[65.92px] text-[14px]">
+                          <h3 className="w-[99px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition">
+                            {song.song.title}
+                          </h3>
+                          <h3 className="w-[78px] h-[20px]">{artistName}</h3>
+                        </span>
+                        <h3 className="text-[15px]">{formatDuration(duration)}</h3>
+                        <HiDotsHorizontal className="ml-[24.08px]" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Cột 2: Bài 6-10 */}
+              <div className="ml-[40px] mt-[24px]">
+                {weeklyTop15.slice(5, 10).map((song, index) => {
+                  const artistName = song.song.artist?.artistName || "Unknown Artist";
+                  const duration = song.song.duration ? parseFloat(song.song.duration) : undefined;
+                  const isPlaying = currentlyPlayingSong?.title === song.song.title;
+                  
+                  return (
+                    <div
+                      key={song.song.id}
+                      className={`h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center cursor-pointer hover:bg-[#1B2039] transition-colors ${isPlaying ? 'bg-[#1B2039]' : ''}`}
+                      onClick={() => handleSongClick(song, weeklyTop15)}
+                    >
+                      <div className="flex text-white">
+                        <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
+                          {formatRank(index + 5)}
+                        </h1>
+                        <img
+                          className="w-[50px] h-[50px] rounded-[5px] mr-[20px] object-cover"
+                          src={song.albumCover || "./Weeklytop15/C6.png"}
+                          alt={song.song.title}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "./Weeklytop15/C6.png";
+                          }}
+                        />
+                        <span className="mr-[51px] text-[14px]">
+                          <h3 className="w-[114px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition">
+                            {song.song.title}
+                          </h3>
+                          <h3 className="w-[78px] h-[20px]">{artistName}</h3>
+                        </span>
+                        <h3 className="text-[15px]">{formatDuration(duration)}</h3>
+                        <HiDotsHorizontal className="ml-[24.08px]" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Cột 3: Bài 11-15 */}
+              <div className="ml-[40px] mt-[24px]">
+                {weeklyTop15.slice(10, 15).map((song, index) => {
+                  const artistName = song.song.artist?.artistName || "Unknown Artist";
+                  const duration = song.song.duration ? parseFloat(song.song.duration) : undefined;
+                  const isPlaying = currentlyPlayingSong?.title === song.song.title;
+                  
+                  return (
+                    <div
+                      key={song.song.id}
+                      className={`h-[90px] w-[360px] border-b-2 border-[#252B4D] flex items-center cursor-pointer hover:bg-[#1B2039] transition-colors ${isPlaying ? 'bg-[#1B2039]' : ''}`}
+                      onClick={() => handleSongClick(song, weeklyTop15)}
+                    >
+                      <div className="flex text-white">
+                        <h1 className=" text-[40px] font-bold mr-[21px] w-[39px] h-[50px]">
+                          {formatRank(index + 10)}
+                        </h1>
+                        <img
+                          className="w-[50px] h-[50px] rounded-[5px] mr-[20px] object-cover"
+                          src={song.albumCover || "./Weeklytop15/C11.png"}
+                          alt={song.song.title}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "./Weeklytop15/C11.png";
+                          }}
+                        />
+                        <span className="mr-[35px] text-[14px]">
+                          <h3 className="w-[126px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition">
+                            {song.song.title}
+                          </h3>
+                          <h3 className="w-[78px] h-[20px]">{artistName}</h3>
+                        </span>
+                        <h3 className="text-[15px]">{formatDuration(duration)}</h3>
+                        <HiDotsHorizontal className="ml-[24.08px]" />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
+          )}
+        </div>
 
-            <div className="relative flex items-center">
-              <div className="absolute w-[10px] h-[10px] left-[38px]  bg-[#FFFF] rounded-full">
-<div className="absolute w-[6px] h-[6px] left-[2px] top-[2px] bg-[#14182A] rounded-full"></div>
-              </div>
-            </div>
+        <div className="mt-[64px]">
+          <div className="flex justify-between">
+            <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold ">
+              Trending Tracks
+            </span>
+            <span className="mr-[165px] text-white text-[15px]">View more</span>
+          </div>
+          <div className="w-[1200px] h-[83px] ">
+            <div className="w-[1200px] h-[10px] ml-[160px] mt-[24px]">
+              <hr className="text-[#252B4DBF]" />
 
-            <div className="relative flex items-center">
-              <div className="absolute w-[10px] h-[10px] left-[654px]  bg-[#3BC8E7] rounded-full">
-                <div className="absolute w-[6px] h-[6px] left-[2px] top-[2px] bg-[#14182A] rounded-full"></div>
+              {/* Dots indicator - giữ nguyên design */}
+              <div className="relative flex items-center ">
+                <div className="absolute w-[10px] h-[10px] left-[345.5px]  bg-[#3BC8E7] rounded-full">
+                  <div className="absolute w-[6px] h-[6px] left-[2px] top-[2px] bg-[#14182A] rounded-full"></div>
+                </div>
               </div>
-            </div>
 
-            <div className="relative flex items-center ">
-              <div className="absolute w-[10px] h-[10px] left-[960.5px] bg-[#3BC8E7] rounded-full">
-                <div className="absolute w-[6px] h-[6px] left-[2px] top-[2px] bg-[#14182A] rounded-full"></div>
+              <div className="relative flex items-center">
+                <div className="absolute w-[10px] h-[10px] left-[38px]  bg-[#FFFF] rounded-full">
+                  <div className="absolute w-[6px] h-[6px] left-[2px] top-[2px] bg-[#14182A] rounded-full"></div>
+                </div>
               </div>
-            </div>
-            <div className="flex mt-[16px]">
-              <div className="w-[267px] h-[50px] ml-[10px] flex text-white ">
-                <img src="./TrendingTrack/D1.png" alt="" />
-                <span className="mr-[6.67px] text-[14px] ml-[20px]">
-                  <h3 className="w-[126px] h-[20px] mb-[6.8px]">
-                    <a href="">Dark Alley Acoustic</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
+
+              <div className="relative flex items-center">
+                <div className="absolute w-[10px] h-[10px] left-[654px]  bg-[#3BC8E7] rounded-full">
+                  <div className="absolute w-[6px] h-[6px] left-[2px] top-[2px] bg-[#14182A] rounded-full"></div>
+                </div>
               </div>
-              <div className="w-[267px] h-[50px] ml-[40px] flex text-white ">
-                <img src="./TrendingTrack/D2.png" alt="" />
-                <span className="mr-[6.67px] text-[14px] ml-[20px] ">
-                  <h3 className="w-[126px] h-[20px] mb-[6.8px]">
-                    <a href="">Dark Alley Acoustic</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
+
+              <div className="relative flex items-center ">
+                <div className="absolute w-[10px] h-[10px] left-[960.5px] bg-[#3BC8E7] rounded-full">
+                  <div className="absolute w-[6px] h-[6px] left-[2px] top-[2px] bg-[#14182A] rounded-full"></div>
+                </div>
               </div>
-              <div className="w-[267px] h-[50px] ml-[40px] flex text-white">
-                <img src="./TrendingTrack/D3.png" alt="" />
-                <span className="mr-[6.67px] text-[14px] ml-[20px]">
-                  <h3 className="w-[126px] h-[20px] mb-[6.8px]">
-                    <a href="">Dark Alley Acoustic</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-              </div>
-              <div className="w-[267px] h-[50px] ml-[40px] flex text-white">
-                <img src="./TrendingTrack/D4.png" alt="" />
-                <span className="mr-[6.67px] text-[14px] ml-[20px]">
-                  <h3 className="w-[126px] h-[20px] mb-[6.8px]">
-                    <a href="">Dark Alley Acoustic</a>
-                  </h3>
-                  <h3 className="w-[78px] h-[20px]">Ava Cornish</h3>
-                </span>
-                <h3 className="text-[15px] ">5:10</h3>
-              </div>
+
+              {/* Trending Tracks List */}
+              {trendingTracks.length === 0 ? (
+                <div className="text-center text-gray-400 py-10 mt-[16px]">
+                  <p className="text-sm">Chưa có bài hát nào</p>
+                </div>
+              ) : (
+                <div className="flex mt-[16px]">
+                  {trendingTracks.map((song, index) => {
+                    const artistName = song.song.artist?.artistName || "Unknown Artist";
+                    const duration = song.song.duration ? parseFloat(song.song.duration) : undefined;
+                    const isPlaying = currentlyPlayingSong?.title === song.song.title;
+                    const defaultImages = ["./TrendingTrack/D1.png", "./TrendingTrack/D2.png", "./TrendingTrack/D3.png", "./TrendingTrack/D4.png"];
+                    
+                    return (
+                      <div
+                        key={song.song.id}
+                        className={`w-[267px] h-[50px] ${index > 0 ? 'ml-[40px]' : 'ml-[10px]'} flex text-white cursor-pointer hover:opacity-80 transition-opacity ${isPlaying ? 'opacity-100' : ''}`}
+                        onClick={() => handleSongClick(song, trendingTracks)}
+                      >
+                        <img
+                          className="w-[50px] h-[50px] rounded-[5px] object-cover"
+                          src={song.albumCover || defaultImages[index] || "./TrendingTrack/D1.png"}
+                          alt={song.song.title}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = defaultImages[index] || "./TrendingTrack/D1.png";
+                          }}
+                        />
+                        <span className="mr-[6.67px] text-[14px] ml-[20px]">
+                          <h3 className="w-[126px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition">
+                            {song.song.title}
+                          </h3>
+                          <h3 className="w-[78px] h-[20px]">{artistName}</h3>
+                        </span>
+                        <h3 className="text-[15px]">{formatDuration(duration)}</h3>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <MusicPlayerBar song={currentlyPlayingSong} />
+    </>
   );
 };
 
