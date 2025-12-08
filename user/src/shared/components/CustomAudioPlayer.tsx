@@ -13,6 +13,8 @@ interface CustomAudioPlayerProps {
   src: string;
   onPlay?: () => void;
   className?: string;
+  songType?: 'FREE' | 'PREMIUM';
+  songArtistId?: number | null;
 }
 
 const formatTime = (time: number) => {
@@ -22,7 +24,7 @@ const formatTime = (time: number) => {
   return `${m}:${s < 10 ? "0" : ""}${s}`;
 };
 
-const CustomAudioPlayer = ({ src, onPlay, className = "" }: CustomAudioPlayerProps) => {
+const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId }: CustomAudioPlayerProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { stopAllAudio, registerAudio, unregisterAudio, currentlyPlayingSong } = useMusic();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -74,13 +76,36 @@ const CustomAudioPlayer = ({ src, onPlay, className = "" }: CustomAudioPlayerPro
     };
   }, []);
 
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
     const audio = audioRef.current;
     if (!audio) return;
 
     if (isPlaying) {
       audio.pause();
     } else {
+      // Kiểm tra premium trước khi phát
+      if (songType === 'PREMIUM') {
+        const { canPlayPremiumSong, isSongOwner } = await import('../../utils/premiumCheck');
+        
+        // Kiểm tra nếu user là chủ sở hữu
+        const isOwner = isSongOwner(songArtistId);
+        
+        if (!isOwner) {
+          const checkResult = await canPlayPremiumSong(
+            { type: songType, artistId: songArtistId }
+          );
+          
+          if (!checkResult.canPlay) {
+            alert(checkResult.reason || 'Bài hát này yêu cầu tài khoản Premium.');
+            // Redirect đến trang upgrade nếu user muốn
+            if (window.confirm(checkResult.reason + '\n\nBạn có muốn nâng cấp tài khoản không?')) {
+              window.location.href = '/upgrade';
+            }
+            return;
+          }
+        }
+      }
+
       // Dừng tất cả audio khác trước khi phát
       stopAllAudio(audio);
       audio.play();

@@ -66,6 +66,7 @@ export interface MySong {
   albumId?: number;
   fileUrl?: string;
   views: number;
+  type?: 'FREE' | 'PREMIUM';
   createdAt?: string;
   updatedAt?: string;
   artist?: {
@@ -95,6 +96,7 @@ export interface CreateSongDto {
   duration?: string;
   fileUrl?: string;
   genreId?: number;
+  type?: 'FREE' | 'PREMIUM';
 }
 
 export interface UpdateSongDto {
@@ -104,6 +106,7 @@ export interface UpdateSongDto {
   genreId?: number;
   albumId?: number;
   coverImage?: string;
+  type?: 'FREE' | 'PREMIUM';
 }
 
 export interface MyAlbumsResponse {

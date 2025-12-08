@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaPlay, FaHeart, FaArrowLeft, FaRegHeart, FaPause, FaComment } from "react-icons/fa";
 import { BsThreeDots } from "react-icons/bs";
+import { Gem } from "lucide-react";
 import Header from "../components/HomePage/Header";
 import Sidebar from "../components/HomePage/Sidebar";
-import { getAlbumById, getSongsByAlbumId, type Song as ApiSong } from "../services/album.service";
+import { getAlbumById, getSongsByAlbumId } from "../services/album.service";
+import type { Song as ApiSong } from "../services/album.service";
 import { incrementSongViews } from "../services/song.service";
 import { toggleWishlist, getWishlistSongIds } from "../services/wishlist.service";
 import { getCurrentUser } from "../services/auth.service";
@@ -20,6 +22,8 @@ interface Song {
   duration: string;
   albumId: string;
   fileUrl?: string;
+  type?: 'FREE' | 'PREMIUM';
+  artistId?: number;
 }
 
 interface AlbumDetail {
@@ -71,6 +75,8 @@ const AlbumDetail = () => {
       duration: song.duration || "0:00",
       albumId: song.albumId?.toString() || "",
       fileUrl: song.fileUrl,
+      type: song.type,
+      artistId: song.artistId,
     };
   };
 
@@ -371,9 +377,16 @@ const AlbumDetail = () => {
                             )}
                         </div>
                         <div className="flex flex-col pr-4">
-                            <span className="font-medium text-base text-white">
-                                {song.title}
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium text-base text-white">
+                                    {song.title}
+                                </span>
+                                {song.type === 'PREMIUM' && (
+                                    <span title="Premium">
+                                        <Gem className="w-4 h-4 text-[#3BC8E7]" />
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <div className="text-gray-400 text-sm hover:text-white transition">
                             {String(song.artist || 'Unknown')}
@@ -399,6 +412,8 @@ const AlbumDetail = () => {
                                 <CustomAudioPlayer
                                     src={song.fileUrl}
                                     className="w-full max-w-[400px]"
+                                    songType={song.type}
+                                    songArtistId={song.artistId}
                                     onPlay={async () => {
                                         try {
                                             await incrementSongViews(song.id);

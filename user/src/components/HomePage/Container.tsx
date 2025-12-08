@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import MusicPlayerBar from "./MusicPlayerBar";
 import { FaChevronRight, FaChevronLeft } from "react-icons/fa";
 import { HiDotsHorizontal } from "react-icons/hi";
+import { Gem } from "lucide-react";
 import { useMusic, type Song } from "../../contexts/MusicContext";
 import { getArtists, type ArtistWithTotalViews } from "../../services/artist.service";
 import { getSongsByArtistId, getNewReleases } from "../../services/song.service";
@@ -115,13 +116,35 @@ const Container = () => {
     fetchNewReleases();
   }, []);
 
-  const handleSongClick = (songData: any) => {
+  const handleSongClick = async (songData: any) => {
+    // Kiểm tra premium trước khi phát
+    if (songData.type === 'PREMIUM') {
+      const { canPlayPremiumSong, isSongOwner } = await import('../../utils/premiumCheck');
+      const songArtistId = songData.artistId || songData.artist?.id;
+      
+      // Kiểm tra nếu user là chủ sở hữu
+      const isOwner = isSongOwner(songArtistId);
+      
+      if (!isOwner) {
+        const checkResult = await canPlayPremiumSong(
+          { type: songData.type, artistId: songArtistId }
+        );
+        
+        if (!checkResult.canPlay) {
+          alert(checkResult.reason || 'Bài hát này yêu cầu tài khoản Premium.');
+          return;
+        }
+      }
+    }
+
     const song: Song = {
       title: songData.title,
       artist: songData.description || songData.artist || "Unknown Artist",
       image: songData.coverImage || songData.image,
       audioUrl: songData.fileUrl || songData.audioUrl,
       id: songData.id,
+      type: songData.type,
+      artistId: songData.artistId,
     };
     
     // Tạo queue từ tất cả danh sách bài hát có sẵn
@@ -132,6 +155,8 @@ const Container = () => {
         image: s.coverImage || './slide/Song1.jpg',
         audioUrl: s.fileUrl || '',
         id: s.id,
+        type: s.type,
+        artistId: s.artistId,
       })),
       ...weeklySongs.map((s: any) => ({
         title: s.title,
@@ -139,6 +164,8 @@ const Container = () => {
         image: s.coverImage || './slide/Song1.jpg',
         audioUrl: s.fileUrl || '',
         id: s.id,
+        type: s.type,
+        artistId: s.artistId,
       })),
       ...newReleases.map((s: any) => ({
         title: s.title,
@@ -146,6 +173,8 @@ const Container = () => {
         image: s.coverImage || './slide/Song1.jpg',
         audioUrl: s.fileUrl || '',
         id: s.id,
+        type: s.type,
+        artistId: s.artistId,
       })),
     ].filter(s => s.audioUrl); // Chỉ lấy bài có audioUrl
 
@@ -202,8 +231,13 @@ const Container = () => {
           
           {/* Thông tin */}
           <span className="flex-1 text-[14px] overflow-hidden">
-            <h3 className="w-full h-[20px] mb-[6.8px] truncate font-semibold">
+            <h3 className="w-full h-[20px] mb-[6.8px] truncate font-semibold flex items-center gap-1">
               {song.title}
+              {song.type === 'PREMIUM' && (
+                <span title="Premium">
+                  <Gem className="w-3 h-3 text-[#3BC8E7] flex-shrink-0" />
+                </span>
+              )}
             </h3>
             <h3 className="w-full h-[20px] text-[#DEDEDE] truncate">
               {song.description || (typeof song.artist === 'string' 
@@ -223,7 +257,6 @@ const Container = () => {
   return (
     <>
       <div className="mt-[43px] mb-[100px]">
-        
         {/* === RECENTLY PLAYED === */}
         <div className="flex justify-between">
           <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">
@@ -241,7 +274,14 @@ const Container = () => {
               onClick={() => handleSongClick(s)}
             >
               <img src={s.coverImage} className="rounded-[10px] mb-[19px] w-full h-[175px] object-cover" />
-              <h3 className="font-semibold truncate">{s.title}</h3>
+              <h3 className="font-semibold truncate flex items-center gap-1">
+                {s.title}
+                {s.type === 'PREMIUM' && (
+                  <span title="Premium">
+                    <Gem className="w-3 h-3 text-[#3BC8E7] flex-shrink-0" />
+                  </span>
+                )}
+              </h3>
               <h3 className="text-[#DEDEDE] truncate">{s.description}</h3>
               <button
                 onClick={(e) => {
@@ -419,6 +459,8 @@ const Container = () => {
                             coverImage: songImage,
                             fileUrl: song.fileUrl,
                             audioUrl: song.fileUrl,
+                            type: song.type,
+                            artistId: song.artistId,
                           })
                         }
                       >
@@ -431,8 +473,13 @@ const Container = () => {
                           }}
                         />
                         <span className="mr-[6.67px] text-[14px] ml-[20px]">
-                          <h3 className="w-[126px] h-[20px] mb-[6.8px] truncate">
+                          <h3 className="w-[126px] h-[20px] mb-[6.8px] truncate flex items-center gap-1">
                             {songTitle}
+                            {song.type === 'PREMIUM' && (
+                              <span title="Premium">
+                                <Gem className="w-3 h-3 text-[#3BC8E7] flex-shrink-0" />
+                              </span>
+                            )}
                           </h3>
                           <h3 className="w-[78px] h-[20px] truncate">{songArtist}</h3>
                         </span>

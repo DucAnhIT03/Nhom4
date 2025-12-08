@@ -6,6 +6,8 @@ export interface Song {
   image: string;
   audioUrl: string;
   id?: number;
+  type?: 'FREE' | 'PREMIUM';
+  artistId?: number | null;
 }
 
 interface MusicContextType {
@@ -59,7 +61,7 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
 
   const currentlyPlayingSong = currentlyPlayingSongState;
 
-  const playNext = () => {
+  const playNext = async () => {
     if (queue.length === 0) {
       console.log('Queue is empty');
       return;
@@ -89,12 +91,58 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
+    // Tìm bài hát tiếp theo có thể phát (bỏ qua premium nếu chưa có subscription)
+    const findNextPlayableSong = async (startIndex: number, direction: 'forward' | 'backward' = 'forward'): Promise<number | null> => {
+      const { isSongOwner } = await import('../utils/premiumCheck');
+      const userSubscription = localStorage.getItem('userSubscription');
+      const isPremium = userSubscription === 'PREMIUM' || userSubscription === 'premium';
+
+      let checkedCount = 0;
+      let currentCheckIndex = startIndex;
+
+      while (checkedCount < currentQueue.length) {
+        if (direction === 'forward') {
+          currentCheckIndex = (currentCheckIndex + 1) % currentQueue.length;
+        } else {
+          currentCheckIndex = (currentCheckIndex - 1 + currentQueue.length) % currentQueue.length;
+        }
+
+        const song = currentQueue[currentCheckIndex];
+        
+        // Nếu là premium, kiểm tra quyền phát
+        if (song.type === 'PREMIUM') {
+          const isOwner = isSongOwner(song.artistId);
+          if (!isOwner && !isPremium) {
+            // Bỏ qua bài premium nếu không có quyền
+            checkedCount++;
+            continue;
+          }
+        }
+
+        // Tìm thấy bài có thể phát
+        return currentCheckIndex;
+      }
+
+      return null; // Không tìm thấy bài nào có thể phát
+    };
+
     if (validIndex < currentQueue.length - 1) {
-      nextIndex = validIndex + 1;
+      const nextPlayableIndex = await findNextPlayableSong(validIndex, 'forward');
+      if (nextPlayableIndex !== null) {
+        nextIndex = nextPlayableIndex;
+      } else {
+        // Không tìm thấy bài nào có thể phát, dừng lại
+        return;
+      }
     } else {
       // Hết danh sách
       if (repeatMode === 'all') {
-        nextIndex = 0; // Quay lại đầu
+        const nextPlayableIndex = await findNextPlayableSong(validIndex, 'forward');
+        if (nextPlayableIndex !== null) {
+          nextIndex = nextPlayableIndex;
+        } else {
+          return; // Không tìm thấy bài nào có thể phát
+        }
       } else {
         return; // Dừng lại
       }
@@ -104,7 +152,7 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
     setCurrentlyPlayingSong(currentQueue[nextIndex]);
   };
 
-  const playPrevious = () => {
+  const playPrevious = async () => {
     if (queue.length === 0) {
       console.log('Queue is empty');
       return;
@@ -126,12 +174,54 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
+    // Tìm bài hát trước đó có thể phát (bỏ qua premium nếu chưa có subscription)
+    const findPreviousPlayableSong = async (startIndex: number): Promise<number | null> => {
+      const { isSongOwner } = await import('../utils/premiumCheck');
+      const userSubscription = localStorage.getItem('userSubscription');
+      const isPremium = userSubscription === 'PREMIUM' || userSubscription === 'premium';
+
+      let checkedCount = 0;
+      let currentCheckIndex = startIndex;
+
+      while (checkedCount < currentQueue.length) {
+        currentCheckIndex = (currentCheckIndex - 1 + currentQueue.length) % currentQueue.length;
+
+        const song = currentQueue[currentCheckIndex];
+        
+        // Nếu là premium, kiểm tra quyền phát
+        if (song.type === 'PREMIUM') {
+          const isOwner = isSongOwner(song.artistId);
+          if (!isOwner && !isPremium) {
+            // Bỏ qua bài premium nếu không có quyền
+            checkedCount++;
+            continue;
+          }
+        }
+
+        // Tìm thấy bài có thể phát
+        return currentCheckIndex;
+      }
+
+      return null; // Không tìm thấy bài nào có thể phát
+    };
+
     if (validIndex > 0) {
-      prevIndex = validIndex - 1;
+      const prevPlayableIndex = await findPreviousPlayableSong(validIndex);
+      if (prevPlayableIndex !== null) {
+        prevIndex = prevPlayableIndex;
+      } else {
+        // Không tìm thấy bài nào có thể phát, dừng lại
+        return;
+      }
     } else {
       // Ở đầu danh sách
       if (repeatMode === 'all') {
-        prevIndex = currentQueue.length - 1; // Quay lại cuối
+        const prevPlayableIndex = await findPreviousPlayableSong(validIndex);
+        if (prevPlayableIndex !== null) {
+          prevIndex = prevPlayableIndex;
+        } else {
+          return; // Không tìm thấy bài nào có thể phát
+        }
       } else {
         return; // Dừng lại
       }

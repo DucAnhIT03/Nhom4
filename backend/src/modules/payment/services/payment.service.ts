@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ILike, Repository } from "typeorm";
-import { Payment, PaymentStatus } from "../../../shared/schemas/payment.schema";
-import { Subscription } from "../../../shared/schemas/subscription.schema";
+import { Payment, PaymentMethod, PaymentStatus } from "../../../shared/schemas/payment.schema";
+import { Subscription, SubscriptionPlanType, SubscriptionStatus } from "../../../shared/schemas/subscription.schema";
 import { SubscriptionPlan } from "../../../shared/schemas/subscription-plan.schema";
 import { CreatePaymentDto } from "../dtos/request/create-payment.dto";
 import { QueryPaymentDto } from "../dtos/request/query-payment.dto";
@@ -30,37 +30,92 @@ export class PaymentService {
       transactionId: dto.transactionId,
       amount: dto.amount,
       paymentMethod: dto.paymentMethod,
-      paymentStatus: PaymentStatus.COMPLETED,
+      paymentStatus: dto.paymentMethod === PaymentMethod.MOMO ? PaymentStatus.PENDING : PaymentStatus.COMPLETED,
       paymentDate: new Date(),
     });
     const savedPayment = await this.paymentRepository.save(payment);
+
+    // Chỉ cập nhật subscription nếu payment đã completed (không phải MoMo pending)
+    if (dto.paymentMethod !== PaymentMethod.MOMO) {
+      const now = new Date();
+      const end = new Date(now);
+      end.setDate(end.getDate() + plan.durationDay);
+
+      const existingSub = await this.subscriptionRepository.findOne({
+        where: { userId: dto.userId },
+      });
+
+      if (existingSub) {
+        existingSub.plan = SubscriptionPlanType.PRENIUM;
+        existingSub.startTime = now;
+        existingSub.endTime = end;
+        existingSub.status = SubscriptionStatus.ACTIVE;
+        await this.subscriptionRepository.save(existingSub);
+      } else {
+        const subscription = this.subscriptionRepository.create({
+          userId: dto.userId,
+          plan: SubscriptionPlanType.PRENIUM,
+          startTime: now,
+          endTime: end,
+          status: SubscriptionStatus.ACTIVE,
+        });
+        await this.subscriptionRepository.save(subscription);
+      }
+    }
+
+    return savedPayment;
+  }
+
+  async completeMomoPayment(orderId: string, transactionId: string): Promise<Payment> {
+    // Parse orderId để lấy paymentId hoặc tìm payment theo orderId
+    // Giả sử orderId có format: ORD{userId}_{timestamp} hoặc lưu paymentId vào orderId
+    const payment = await this.paymentRepository.findOne({
+      where: { transactionId: orderId },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!payment) {
+      throw new NotFoundException("Payment not found");
+    }
+
+    // Cập nhật payment status
+    payment.paymentStatus = PaymentStatus.COMPLETED;
+    payment.transactionId = transactionId;
+    payment.paymentDate = new Date();
+    await this.paymentRepository.save(payment);
+
+    // Lấy plan và cập nhật subscription
+    const plan = await this.planRepository.findOne({ where: { id: payment.planId } });
+    if (!plan) {
+      throw new NotFoundException("Subscription plan not found");
+    }
 
     const now = new Date();
     const end = new Date(now);
     end.setDate(end.getDate() + plan.durationDay);
 
     const existingSub = await this.subscriptionRepository.findOne({
-      where: { userId: dto.userId },
+      where: { userId: payment.userId },
     });
 
     if (existingSub) {
-      existingSub.plan = plan.planName as any;
+      existingSub.plan = SubscriptionPlanType.PRENIUM;
       existingSub.startTime = now;
       existingSub.endTime = end;
-      existingSub.status = "ACTIVE" as any;
+      existingSub.status = SubscriptionStatus.ACTIVE;
       await this.subscriptionRepository.save(existingSub);
     } else {
       const subscription = this.subscriptionRepository.create({
-        userId: dto.userId,
-        plan: plan.planName as any,
+        userId: payment.userId,
+        plan: SubscriptionPlanType.PRENIUM,
         startTime: now,
         endTime: end,
-        status: "ACTIVE" as any,
+        status: SubscriptionStatus.ACTIVE,
       });
       await this.subscriptionRepository.save(subscription);
     }
 
-    return savedPayment;
+    return payment;
   }
 
   findByUser(userId: number): Promise<Payment[]> {

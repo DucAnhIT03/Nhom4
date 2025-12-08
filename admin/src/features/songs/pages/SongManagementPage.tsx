@@ -308,6 +308,7 @@ const SongManagementPage = () => {
         song={currentlyPlayingSong}
         onNext={handlePlayNext}
         onPrevious={handlePlayPrevious}
+        onClose={() => setCurrentlyPlayingSong(null)}
       />
     </div>
   );

@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Gem } from "lucide-react";
 import EditProfileModal from "./EditProfileModal";
 import ChangePasswordModal from "./ChangePasswordModal";
+import { isUserPremium } from "../../services/subscription.service";
 
 interface UserMenuDropdownProps {
   avatar: string;
@@ -13,10 +16,27 @@ const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({
   userName,
   onLogout,
 }) => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const checkPremium = async () => {
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        const premium = await isUserPremium(parseInt(userId));
+        setIsPremium(premium);
+      }
+    };
+    checkPremium();
+    
+    // Refresh premium status mỗi 30 giây
+    const interval = setInterval(checkPremium, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Đóng dropdown khi click bên ngoài
   useEffect(() => {
@@ -45,13 +65,16 @@ const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="focus:outline-none"
+          className="focus:outline-none flex items-center gap-2"
         >
           <img
             src={avatar}
             className="w-10 h-10 rounded-full border-2 border-white cursor-pointer hover:border-[#3BC8E7] transition-colors"
             alt="avatar"
           />
+          {isPremium && (
+            <Gem className="w-5 h-5 text-[#3BC8E7] flex-shrink-0" />
+          )}
         </button>
 
         {isOpen && (
@@ -110,6 +133,29 @@ const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({
                   />
                 </svg>
                 <span>Đổi mật khẩu</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  navigate("/upgrade");
+                  setIsOpen(false);
+                }}
+                className="w-full text-left px-4 py-3 text-white hover:bg-[#3BC8E7]/10 transition-colors flex items-center gap-3"
+              >
+                <svg
+                  className="w-5 h-5 text-[#3BC8E7]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
+                </svg>
+                <span>Nâng cấp tài khoản</span>
               </button>
 
               <div className="border-t border-[#3BC8E7]/20 my-1"></div>

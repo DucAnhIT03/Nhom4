@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Length } from "class-validator";
+import { IsInt, IsNotEmpty, IsOptional, IsString, Length, IsEnum } from "class-validator";
 
 export class CreateSongDto {
   @IsString()
@@ -21,6 +21,10 @@ export class CreateSongDto {
   @IsNotEmpty()
   @Length(1, 255)
   fileUrl!: string; // Bắt buộc vì phải upload file
+
+  @IsOptional()
+  @IsEnum(["FREE", "PREMIUM"])
+  type?: "FREE" | "PREMIUM";
 }
 
 

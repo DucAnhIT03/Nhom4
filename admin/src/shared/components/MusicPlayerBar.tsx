@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, X } from 'lucide-react';
 import './MusicPlayerBar.css';
 
 interface Song {
@@ -16,6 +16,7 @@ interface MusicPlayerBarProps {
   song: Song | null;
   onNext?: () => void;
   onPrevious?: () => void;
+  onClose?: () => void;
 }
 
 const formatTime = (time: number) => {
@@ -25,7 +26,7 @@ const formatTime = (time: number) => {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 };
 
-const MusicPlayerBar = ({ song, onNext, onPrevious }: MusicPlayerBarProps) => {
+const MusicPlayerBar = ({ song, onNext, onPrevious, onClose }: MusicPlayerBarProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.8);
@@ -146,12 +147,32 @@ const MusicPlayerBar = ({ song, onNext, onPrevious }: MusicPlayerBarProps) => {
     setIsMuted(!isMuted);
   };
 
+  const handleClose = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    if (onClose) {
+      onClose();
+    }
+  };
+
   if (!song || !song.fileUrl) return null;
 
   return (
     <>
       <audio ref={audioRef} />
       <div className="music-player-bar">
+        {onClose && (
+          <button
+            onClick={handleClose}
+            className="player-close-btn"
+            title="Đóng"
+          >
+            <X size={18} />
+          </button>
+        )}
         <div className="player-left">
           <div className="player-info">
             <h4 className="player-title">{song.title}</h4>

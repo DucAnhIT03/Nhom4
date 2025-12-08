@@ -4,7 +4,7 @@ import {
   PlayCircle, Disc, Search, Trash2, Edit, Plus,
   Image as ImageIcon, Calendar, CheckCircle2, X, Save, ListMusic,
   Loader2, FolderOpen, Home, Play,
-  MessageSquare
+  MessageSquare, Gem
 } from "lucide-react";
 import MyAlbumsTab from "../components/ArtistMyContent/MyAlbumsTab";
 import CommentManagementTab from "../components/ArtistMyContent/CommentManagementTab";
@@ -74,12 +74,14 @@ interface Song {
   status: string;
   releaseDate?: string; 
   albumId?: number | string | null;
-  genreId?: number;     
+  genreId?: number;
+  artistId?: number | null;
   genre?: string;       
   coverImage?: string;  
   cover?: string;       
   audioUrl?: string; 
   fileUrl?: string;
+  type?: 'FREE' | 'PREMIUM';
   artist?: string; 
   description?: string; 
 }
@@ -188,6 +190,7 @@ const ArtistDashboard = () => {
   const [activeTab, setActiveTab] = useState<"dashboard" | "songs" | "albums" | "playlists" | "upload" | "settings" | "my-content" | "comments">(tabFromUrl || "dashboard");
   const [artistName, setArtistName] = useState("Artist");
   const [avatar, setAvatar] = useState("https://cdn-icons-png.flaticon.com/512/3974/3974038.png");
+  const [currentArtistId, setCurrentArtistId] = useState<number | null>(null);
   
   // Music player context
   const { setCurrentlyPlayingSong, setQueue } = useMusic();
@@ -223,6 +226,7 @@ const ArtistDashboard = () => {
     status: "Public", 
     albumId: "" as string | number,
     duration: "",
+    type: "FREE" as "FREE" | "PREMIUM",
     file: null as File | null, 
     fileName: "", 
     coverFile: null as File | null, 
@@ -289,12 +293,22 @@ const ArtistDashboard = () => {
           releaseDate: song.createdAt,
           albumId: song.albumId || null,
           genreId: song.genreId || null,
+          artistId: song.artistId || song.artist?.id || null,
           genre: genresData.find(g => g.id === song.genreId)?.genreName || 'Unknown',
           coverImage: song.coverImage || '',
           cover: song.coverImage || '',
           audioUrl: song.fileUrl,
           fileUrl: song.fileUrl,
+          type: song.type || 'FREE',
         }));
+        
+        // Lưu artistId từ bài hát đầu tiên (tất cả đều cùng artistId trong getMySongs)
+        if (songsData.length > 0 && songsData[0].artistId) {
+          const artistId = songsData[0].artistId;
+          setCurrentArtistId(artistId);
+          // Lưu vào localStorage để dùng ở các component khác
+          localStorage.setItem('artistId', artistId.toString());
+        }
         
         const data = await apiService.getDashboard();
         setStats([
@@ -602,6 +616,7 @@ const ArtistDashboard = () => {
             title: songForm.title,
             fileUrl: fileUrl,
             genreId: selectedGenreId,
+            type: songForm.type || 'FREE',
         };
 
         if (finalCoverUrl) {
@@ -623,7 +638,7 @@ const ArtistDashboard = () => {
         } else {
             await createMySong(payload);
             await fetchData();
-            setSongForm({ title: "", artist: "", description: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", file: null, fileName: "", coverFile: null, coverPreview: "" });
+            setSongForm({ title: "", artist: "", description: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", type: "FREE", file: null, fileName: "", coverFile: null, coverPreview: "" });
             setActiveTab("songs");
             alert("Đăng tải bài hát thành công!");
         }
@@ -713,6 +728,7 @@ const ArtistDashboard = () => {
         genre: genreName, 
         status: song.status, 
         albumId: song.albumId || "",
+        type: song.type || "FREE",
         file: null,
         fileName: "",
         coverFile: null,
@@ -728,6 +744,24 @@ const ArtistDashboard = () => {
       return;
     }
 
+    // Kiểm tra nếu là bài premium
+    if (song.type === 'PREMIUM') {
+      // Kiểm tra xem user hiện tại có phải là nghệ sĩ sở hữu bài hát không
+      const isOwner = currentArtistId !== null && song.artistId === currentArtistId;
+      
+      if (!isOwner) {
+        // Nếu không phải chủ sở hữu, kiểm tra subscription
+        const userSubscription = localStorage.getItem('userSubscription');
+        const isPremium = userSubscription === 'PREMIUM' || userSubscription === 'premium';
+        
+        if (!isPremium) {
+          alert("Bài hát này yêu cầu tài khoản Premium. Vui lòng nâng cấp tài khoản để nghe bài hát này.");
+          return;
+        }
+      }
+      // Nếu là chủ sở hữu, cho phép nghe dù không có premium subscription
+    }
+
     const audioUrl = song.audioUrl || song.fileUrl || "";
     const coverImage = song.coverImage || song.cover || "";
 
@@ -738,6 +772,8 @@ const ArtistDashboard = () => {
       image: coverImage || "https://via.placeholder.com/300",
       audioUrl: audioUrl,
       id: typeof song.id === 'number' ? song.id : undefined,
+      type: song.type,
+      artistId: song.artistId ?? undefined,
     };
 
     // Set bài hát đang phát
@@ -752,6 +788,8 @@ const ArtistDashboard = () => {
         image: s.coverImage || s.cover || "https://via.placeholder.com/300",
         audioUrl: s.audioUrl || s.fileUrl || "",
         id: typeof s.id === 'number' ? s.id : undefined,
+        type: s.type,
+        artistId: s.artistId ?? undefined,
       }))
       .filter(s => s.audioUrl); // Chỉ lấy bài có audioUrl
 
@@ -905,6 +943,7 @@ const ArtistDashboard = () => {
                                 <div><label className="text-gray-400 text-sm mb-1 block">Thể loại</label><select value={songForm.genre} onChange={(e) => setSongForm({...songForm, genre: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600">{genres.length > 0 ? genres.map(g => <option key={g.id} value={g.genreName}>{g.genreName}</option>) : <option value="">Đang tải...</option>}</select></div>
                                 <div><label className="text-gray-400 text-sm mb-1 block">Trạng thái</label><select value={songForm.status} onChange={(e) => setSongForm({...songForm, status: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600"><option>Public</option><option>Private</option></select></div>
                             </div>
+                            <div><label className="text-gray-400 text-sm mb-1 block">Loại bài hát</label><select value={songForm.type} onChange={(e) => setSongForm({...songForm, type: e.target.value as "FREE" | "PREMIUM"})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#3BC8E7]"><option value="FREE">Miễn phí</option><option value="PREMIUM">Premium</option></select></div>
                             <div><label className="text-gray-400 text-sm mb-1 block">Thuộc Album</label><select value={songForm.albumId || ""} onChange={(e) => setSongForm({...songForm, albumId: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#3BC8E7]"><option value="">-- Single --</option>{albums.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}</select></div>
                         </>
                     )}
@@ -1039,7 +1078,7 @@ const ArtistDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard": return <div className="space-y-6 animate-in fade-in duration-500"><h2 className="text-3xl font-bold text-white mb-6">Tổng quan</h2><div className="grid grid-cols-1 md:grid-cols-4 gap-6">{stats.map((stat, i) => (<div key={i} className="bg-[#1E2542] p-6 rounded-2xl shadow-lg border border-gray-700"><div className="flex items-center justify-between mb-4"><div className={`p-3 rounded-full bg-opacity-20 ${stat.color.replace('text', 'bg')} ${stat.color}`}>{stat.icon}</div></div><h3 className="text-3xl font-bold text-white mb-1">{stat.value}</h3><p className="text-gray-400 text-sm">{stat.label}</p></div>))}</div></div>;
-      case "songs": return <div className="animate-in fade-in duration-500 pb-24"><div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold text-white">Thư viện nhạc ({songs.length})</h2><button onClick={() => { setSongForm({ title: "", artist: "", description: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", file: null, fileName: "", coverFile: null, coverPreview: "" }); setActiveTab("upload"); }} className="bg-[#3BC8E7] text-black px-4 py-2 rounded-full font-bold hover:bg-[#34b3ce] transition flex items-center gap-2"><Plus size={18} /> Đăng bài mới</button></div><div className="bg-[#1E2542] rounded-2xl overflow-hidden border border-gray-700"><table className="w-full text-left text-gray-300"><thead className="bg-[#151a30] text-gray-400 uppercase text-xs"><tr><th className="p-4">Tên bài hát</th><th className="p-4">Thể loại</th><th className="p-4">Album</th><th className="p-4">Trạng thái</th><th className="p-4 text-center">Hành động</th></tr></thead><tbody>{songs.map((song) => { const album = albums.find(a => String(a.id) === String(song.albumId)); const songGenre = genres.find(g => g.id === song.genreId); const hasAudio = song.audioUrl || song.fileUrl; return (<tr key={song.id} className="border-b border-gray-700 hover:bg-[#252d4d] transition"><td className="p-4 font-medium text-white flex items-center gap-3"><div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800">{song.coverImage || song.cover ? <img src={song.coverImage || song.cover} alt={song.title} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">♫</div>}</div><div className="flex items-center gap-3 flex-1"><div><div>{song.title}</div><div className="text-xs text-gray-500">{song.artist || "Nghệ sĩ"}</div></div>{hasAudio && <button onClick={(e) => { e.stopPropagation(); handlePlaySong(song); }} className="w-8 h-8 rounded-full bg-[#3BC8E7]/20 hover:bg-[#3BC8E7]/30 flex items-center justify-center text-[#3BC8E7] transition hover:scale-110" title="Phát nhạc"><Play size={16} fill="currentColor" /></button>}</div></td><td className="p-4 text-sm text-gray-400">{songGenre ? <span className="px-2 py-1 rounded bg-[#3BC8E7]/20 text-[#3BC8E7]">{songGenre.genreName}</span> : <span className="text-gray-600 italic">-</span>}</td><td className="p-4 text-sm text-gray-400">{album ? <span className="flex items-center gap-1 text-[#3BC8E7]"><Disc size={14}/> {album.title}</span> : <span className="text-gray-600 italic">Single</span>}</td><td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${song.status === 'Public' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{song.status}</span></td><td className="p-4 flex justify-center gap-3"><button onClick={() => openEditSong(song)} className="text-gray-400 hover:text-[#3BC8E7]"><Edit size={18} /></button><button onClick={() => handleDeleteItem('songs', song.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button></td></tr>); })}</tbody></table></div></div>;
+      case "songs": return <div className="animate-in fade-in duration-500 pb-24"><div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold text-white">Thư viện nhạc ({songs.length})</h2><button onClick={() => { setSongForm({ title: "", artist: "", description: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", type: "FREE", file: null, fileName: "", coverFile: null, coverPreview: "" }); setActiveTab("upload"); }} className="bg-[#3BC8E7] text-black px-4 py-2 rounded-full font-bold hover:bg-[#34b3ce] transition flex items-center gap-2"><Plus size={18} /> Đăng bài mới</button></div><div className="bg-[#1E2542] rounded-2xl overflow-hidden border border-gray-700"><table className="w-full text-left text-gray-300"><thead className="bg-[#151a30] text-gray-400 uppercase text-xs"><tr><th className="p-4">Tên bài hát</th><th className="p-4">Thể loại</th><th className="p-4">Album</th><th className="p-4">Trạng thái</th><th className="p-4 text-center">Hành động</th></tr></thead><tbody>{songs.map((song) => { const album = albums.find(a => String(a.id) === String(song.albumId)); const songGenre = genres.find(g => g.id === song.genreId); const hasAudio = song.audioUrl || song.fileUrl; const isPremium = song.type === 'PREMIUM'; return (<tr key={song.id} className="border-b border-gray-700 hover:bg-[#252d4d] transition"><td className="p-4 font-medium text-white flex items-center gap-3"><div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800 relative">{song.coverImage || song.cover ? <img src={song.coverImage || song.cover} alt={song.title} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">♫</div>}{isPremium && <div className="absolute top-0 right-0 bg-gradient-to-br from-yellow-400 to-yellow-600 p-1 rounded-bl-lg"><Gem size={12} className="text-white" fill="currentColor" /></div>}</div><div className="flex items-center gap-3 flex-1"><div><div className="flex items-center gap-2">{song.title}{isPremium && <span className="text-xs text-yellow-400">Premium</span>}</div><div className="text-xs text-gray-500">{song.artist || "Nghệ sĩ"}</div></div>{hasAudio && <button onClick={(e) => { e.stopPropagation(); handlePlaySong(song); }} className="w-8 h-8 rounded-full bg-[#3BC8E7]/20 hover:bg-[#3BC8E7]/30 flex items-center justify-center text-[#3BC8E7] transition hover:scale-110" title="Phát nhạc"><Play size={16} fill="currentColor" /></button>}</div></td><td className="p-4 text-sm text-gray-400">{songGenre ? <span className="px-2 py-1 rounded bg-[#3BC8E7]/20 text-[#3BC8E7]">{songGenre.genreName}</span> : <span className="text-gray-600 italic">-</span>}</td><td className="p-4 text-sm text-gray-400">{album ? <span className="flex items-center gap-1 text-[#3BC8E7]"><Disc size={14}/> {album.title}</span> : <span className="text-gray-600 italic">Single</span>}</td><td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${song.status === 'Public' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{song.status}</span></td><td className="p-4 flex justify-center gap-3"><button onClick={() => openEditSong(song)} className="text-gray-400 hover:text-[#3BC8E7]"><Edit size={18} /></button><button onClick={() => handleDeleteItem('songs', song.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button></td></tr>); })}</tbody></table></div></div>;
       
       // --- TAB UPLOAD ---
       case "upload": return (
@@ -1075,6 +1114,17 @@ const ArtistDashboard = () => {
                                 <option value="">-- Single --</option>{albums.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
                             </select>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="text-gray-400 text-sm mb-1 block">Loại bài hát <span className="text-yellow-400">*</span></label>
+                        <select value={songForm.type} onChange={(e) => setSongForm({...songForm, type: e.target.value as "FREE" | "PREMIUM"})} className="w-full bg-[#151a30] text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-[#3BC8E7]">
+                            <option value="FREE">Miễn phí</option>
+                            <option value="PREMIUM">Premium (Yêu cầu nâng cấp tài khoản)</option>
+                        </select>
+                        {songForm.type === "PREMIUM" && (
+                            <p className="text-xs text-yellow-400 mt-1">⚠️ Bài hát Premium chỉ có thể nghe khi người dùng đã nâng cấp tài khoản</p>
+                        )}
                     </div>
 
                     <div>

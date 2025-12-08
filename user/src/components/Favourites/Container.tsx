@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { IoClose } from "react-icons/io5";
 import { FaChevronRight } from "react-icons/fa";
+import { Gem } from "lucide-react";
 import { FaChevronLeft } from "react-icons/fa";
 import { getWishlist, toggleWishlist, type WishlistItem } from "../../services/wishlist.service";
 import { getCurrentUser } from "../../services/auth.service";
@@ -179,6 +180,26 @@ const Container = () => {
       return;
     }
 
+    // Kiểm tra premium trước khi phát
+    if (item.song.type === 'PREMIUM') {
+      const { canPlayPremiumSong, isSongOwner } = await import('../../utils/premiumCheck');
+      const songArtistId = item.song.artistId || item.song.artist?.id;
+      
+      // Kiểm tra nếu user là chủ sở hữu
+      const isOwner = isSongOwner(songArtistId);
+      
+      if (!isOwner) {
+        const checkResult = await canPlayPremiumSong(
+          { type: item.song.type, artistId: songArtistId }
+        );
+        
+        if (!checkResult.canPlay) {
+          alert(checkResult.reason || 'Bài hát này yêu cầu tài khoản Premium.');
+          return;
+        }
+      }
+    }
+
     const artistName = item.song.artist?.artistName || "Unknown Artist";
     const songData = {
       title: item.song.title,
@@ -186,6 +207,8 @@ const Container = () => {
       image: item.albumCover || "./Featured Albums/Anh1.png",
       audioUrl: item.song.fileUrl,
       id: item.song.id,
+      type: item.song.type,
+      artistId: item.song.artistId,
     };
     
     setCurrentlyPlayingSong(songData);
@@ -198,6 +221,8 @@ const Container = () => {
       image: i.albumCover || "./Featured Albums/Anh1.png",
       audioUrl: i.song.fileUrl || "",
       id: i.song.id,
+      type: i.song.type,
+      artistId: i.song.artistId,
     })).filter(s => s.audioUrl);
     
     const index = queue.findIndex(s => 
@@ -282,7 +307,14 @@ const Container = () => {
                 >
                   <td className="py-3 px-2">{(index + 1).toString().padStart(2, "0")}</td>
                   <td className="py-3 text-[#3BC8E7] cursor-pointer hover:underline">
-                    {item.song.title}
+                    <div className="flex items-center gap-2">
+                      {item.song.title}
+                      {item.song.type === 'PREMIUM' && (
+                        <span title="Premium">
+                          <Gem className="w-4 h-4 text-[#3BC8E7]" />
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3">{item.albumName || "Unknown Album"}</td>
                   <td className="py-3 w-[500px] min-w-[400px]" onClick={(e) => e.stopPropagation()}>
@@ -290,6 +322,8 @@ const Container = () => {
                       <CustomAudioPlayer
                         src={item.song.fileUrl}
                         className="w-full"
+                        songType={item.song.type}
+                        songArtistId={item.song.artistId}
                         onPlay={async () => {
                           try {
                             await incrementSongViews(item.song.id);
@@ -406,8 +440,13 @@ const Container = () => {
                     }}
                   />
                   <h3 className="font-semibold mb-1">
-                    <span className="hover:text-[#3BC8E7] transition">
+                    <span className="hover:text-[#3BC8E7] transition flex items-center gap-1">
                       {item.song.title}
+                      {item.song.type === 'PREMIUM' && (
+                        <span title="Premium">
+                          <Gem className="w-3 h-3 text-[#3BC8E7]" />
+                        </span>
+                      )}
                     </span>
                   </h3>
                   <h3 className="text-[#DEDEDE] h-[24px]">{artistName}</h3>

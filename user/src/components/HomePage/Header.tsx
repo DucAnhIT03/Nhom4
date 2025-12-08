@@ -167,6 +167,13 @@ const Header: React.FC = () => {
           </div>
           <span className="text-[#3BC8E7] ml-[35px] text-[15px]">Trending Songs :</span>
           <span className="text-white ml-1 text-[15px]">Dream your moments, Until I Met You, Gim</span>
+          <button
+            onClick={() => navigate("/upgrade")}
+            className="ml-[35px] bg-gradient-to-r from-[#3BC8E7] to-[#25C3E7] text-white px-4 py-1.5 rounded-lg text-[14px] font-semibold hover:from-[#2ba8c7] hover:to-[#1fa3c2] transition-all shadow-lg relative group"
+            title="Chọn gói phù hợp với bạn và tận hưởng trải nghiệm âm nhạc không giới hạn"
+          >
+            Nâng cấp tài khoản Premium
+          </button>
         </div>
 
         {/* RIGHT SIDE */}

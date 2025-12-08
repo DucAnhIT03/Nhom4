@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaHeart, FaArrowLeft, FaRegHeart } from "react-icons/fa";
+import { Gem } from "lucide-react";
 import Header from "../HomePage/Header";
 import Sidebar from "../HomePage/Sidebar";
 import Footer from "../HomePage/Footer";
@@ -21,6 +22,8 @@ interface Song {
   artist: string;
   duration: string;
   fileUrl?: string;
+  type?: 'FREE' | 'PREMIUM';
+  artistId?: number;
 }
 
 const GenrePage: React.FC = () => {
@@ -59,6 +62,8 @@ const GenrePage: React.FC = () => {
       artist: artistName,
       duration: song.duration || "0:00",
       fileUrl: song.fileUrl,
+      type: song.type,
+      artistId: song.artistId,
     };
   };
 
@@ -280,9 +285,16 @@ const GenrePage: React.FC = () => {
                       )}
                     </div>
                     <div className="flex flex-col pr-4">
-                      <span className="font-medium text-base text-white">
-                        {song.title}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-base text-white">
+                          {song.title}
+                        </span>
+                        {song.type === 'PREMIUM' && (
+                          <span title="Premium">
+                            <Gem className="w-4 h-4 text-[#3BC8E7]" />
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="text-gray-400 text-sm hover:text-white transition">
                       {String(song.artist || 'Unknown')}
@@ -308,6 +320,8 @@ const GenrePage: React.FC = () => {
                         <CustomAudioPlayer
                           src={song.fileUrl}
                           className="w-full max-w-[400px]"
+                          songType={song.type}
+                          songArtistId={song.artistId}
                           onPlay={async () => {
                             try {
                               await incrementSongViews(song.id);

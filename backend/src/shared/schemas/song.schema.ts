@@ -35,6 +35,9 @@ export class Song {
   @Column({ name: "file_url", length: 255, nullable: true })
   fileUrl?: string;
 
+  @Column({ type: "enum", enum: ["FREE", "PREMIUM"], nullable: false, default: "FREE" })
+  type!: "FREE" | "PREMIUM";
+
   @Column({ type: "int", nullable: false, default: 0 })
   views!: number;
 

@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS songs (
   genre_id INT NULL,
   cover_image VARCHAR(255) NULL,
   file_url VARCHAR(255) NULL,
+  type ENUM('FREE','PREMIUM') NOT NULL DEFAULT 'FREE',
   views INT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -123,6 +124,7 @@ CREATE TABLE IF NOT EXISTS songs (
   INDEX idx_song_genre_id (genre_id),
   INDEX idx_song_views (views),
   INDEX idx_song_created_at (created_at),
+  INDEX idx_song_type (type),
   CONSTRAINT fk_song_artist FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE CASCADE,
   CONSTRAINT fk_song_album FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE,
   CONSTRAINT fk_song_genre FOREIGN KEY (genre_id) REFERENCES genres(id) ON DELETE SET NULL
@@ -302,6 +304,15 @@ CREATE TABLE IF NOT EXISTS banners (
   INDEX idx_song_id (song_id),
   CONSTRAINT fk_banner_song FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+-- ============================================================
+-- Migration: Thêm column type vào bảng songs (nếu chưa có)
+-- Chạy lệnh này nếu database đã tồn tại và chưa có column type
+-- ============================================================
+-- ALTER TABLE songs 
+-- ADD COLUMN type ENUM('FREE','PREMIUM') NOT NULL DEFAULT 'FREE' AFTER file_url;
+-- ALTER TABLE songs 
+-- ADD INDEX idx_song_type (type);
 
 -- ============================================================
 -- Seed tài khoản admin mặc định (dùng cho môi trường dev/test)

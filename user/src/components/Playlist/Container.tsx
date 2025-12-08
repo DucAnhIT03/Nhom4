@@ -7,6 +7,7 @@ import MusicPlayerBar from "../HomePage/MusicPlayerBar";
 import { useMusic } from "../../contexts/MusicContext";
 import { FaArrowLeft, FaComment } from "react-icons/fa";
 import CommentModal from "../Comments/CommentModal";
+import { Gem } from "lucide-react";
 
 interface MostPlayedItemWithAlbum extends MostPlayedItem {
   albumCover?: string;
@@ -217,6 +218,26 @@ const Container = () => {
       return;
     }
 
+    // Kiểm tra premium trước khi phát
+    if (song.song.type === 'PREMIUM') {
+      const { canPlayPremiumSong, isSongOwner } = await import('../../utils/premiumCheck');
+      const songArtistId = song.song.artistId || song.song.artist?.id;
+      
+      // Kiểm tra nếu user là chủ sở hữu
+      const isOwner = isSongOwner(songArtistId);
+      
+      if (!isOwner) {
+        const checkResult = await canPlayPremiumSong(
+          { type: song.song.type, artistId: songArtistId }
+        );
+        
+        if (!checkResult.canPlay) {
+          alert(checkResult.reason || 'Bài hát này yêu cầu tài khoản Premium.');
+          return;
+        }
+      }
+    }
+
     const artistName = song.song.artist?.artistName || "Unknown Artist";
     const songData = {
       title: song.song.title,
@@ -224,6 +245,8 @@ const Container = () => {
       image: song.albumCover || "./History/s1.jpg",
       audioUrl: song.song.fileUrl,
       id: song.song.id,
+      type: song.song.type,
+      artistId: song.song.artistId,
     };
     
     setCurrentlyPlayingSong(songData);
@@ -236,6 +259,8 @@ const Container = () => {
       image: i.albumCover || "./History/s1.jpg",
       audioUrl: i.song.fileUrl || "",
       id: i.song.id,
+      type: i.song.type,
+      artistId: i.song.artistId,
     })).filter(s => s.audioUrl);
     
     const index = queue.findIndex(s => 
@@ -304,8 +329,13 @@ const Container = () => {
                         <FaComment size={14} />
                       </button>
                       <h3 className="font-semibold mb-1">
-                        <span className="hover:text-[#3BC8E7] transition">
+                        <span className="hover:text-[#3BC8E7] transition flex items-center gap-1">
                           {item.song?.title}
+                          {item.song?.type === 'PREMIUM' && (
+                            <span title="Premium">
+                              <Gem className="w-3 h-3 text-[#3BC8E7]" />
+                            </span>
+                          )}
                         </span>
                       </h3>
                       <h3 className="text-[#DEDEDE] h-[24px]">{artistName}</h3>

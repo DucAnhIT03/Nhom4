@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { getActiveBanners, type Banner } from '../../services/banner.service';
+import { getActiveBanners, type Banner as BannerType } from '../../services/banner.service';
 import { getSongById } from '../../services/song.service';
 import { toggleWishlist } from '../../services/wishlist.service';
 import { useMusic } from '../../contexts/MusicContext';
 
 const Banner = () => {
-  const [banner, setBanner] = useState<Banner | null>(null);
+  const [banner, setBanner] = useState<BannerType | null>(null);
   const [loading, setLoading] = useState(false);
   const { setCurrentlyPlayingSong } = useMusic();
 
@@ -29,11 +29,35 @@ const Banner = () => {
     try {
       const song = await getSongById(banner.songId);
       if (song && song.fileUrl) {
+        // Kiểm tra premium trước khi phát
+        if (song.type === 'PREMIUM') {
+          const { canPlayPremiumSong, isSongOwner } = await import('../../utils/premiumCheck');
+          const songArtistId = song.artistId;
+          
+          // Kiểm tra nếu user là chủ sở hữu
+          const isOwner = isSongOwner(songArtistId);
+          
+          if (!isOwner) {
+            const checkResult = await canPlayPremiumSong(
+              { type: song.type, artistId: songArtistId }
+            );
+            
+            if (!checkResult.canPlay) {
+              alert(checkResult.reason || 'Bài hát này yêu cầu tài khoản Premium.');
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
         setCurrentlyPlayingSong({
           title: song.title,
           artist: song.artist?.artistName || 'Unknown Artist',
           image: song.coverImage || banner.imageUrl,
           audioUrl: song.fileUrl,
+          id: song.id,
+          type: song.type,
+          artistId: song.artistId,
         });
       } else {
         alert('Không tìm thấy bài hát hoặc bài hát chưa có file!');

@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Length } from "class-validator";
+import { IsInt, IsNotEmpty, IsOptional, IsString, Length, IsEnum } from "class-validator";
 
 export class CreateArtistSongDto {
   @IsString()
@@ -27,5 +27,9 @@ export class CreateArtistSongDto {
   @IsString()
   @Length(1, 255)
   coverImage?: string;
+
+  @IsOptional()
+  @IsEnum(["FREE", "PREMIUM"])
+  type?: "FREE" | "PREMIUM";
 }
 

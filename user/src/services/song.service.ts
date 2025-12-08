@@ -10,6 +10,7 @@ export interface Song {
   albumId?: number;
   fileUrl?: string;
   coverImage?: string;
+  type?: 'FREE' | 'PREMIUM';
   views: number;
   createdAt?: string;
   updatedAt?: string;

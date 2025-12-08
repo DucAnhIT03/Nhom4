@@ -13,31 +13,13 @@ interface AlbumCard {
   duration?: string; 
 }
 
-// Top 15 (Vẫn giữ mock data như cũ theo ý bạn)
-const top15 = [
-  { id: "top-1", img: "./Top15Albums/A1.png", title: "Until I Met You", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-2", img: "./Top15Albums/A2.png", title: "Walking Promises", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-3", img: "./Top15Albums/A3.png", title: "Gimme Some Courage", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-4", img: "./Top15Albums/A4.png", title: "Desired Games", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-5", img: "./Top15Albums/A5.png", title: "Dark Alley Acoustic", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-6", img: "./Top15Albums/A6.png", title: "Walking Promises", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-7", img: "./Top15Albums/A7.png", title: "Endless Things", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-8", img: "./Top15Albums/A8.png", title: "Dream Your Moments", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-9", img: "./Top15Albums/A9.png", title: "Until I Met You", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-10", img: "./Top15Albums/A10.png", title: "Gimme Some Courage", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-11", img: "./Top15Albums/A11.png", title: "Dark Alley Acoustic", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-12", img: "./Top15Albums/A12.png", title: "The Heartbeat Stops", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-13", img: "./Top15Albums/A13.png", title: "One More Stranger", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-14", img: "./Top15Albums/A14.png", title: "Walking Promises", author: "Ava Cornish", duration: "5:10" },
-  { id: "top-15", img: "./Top15Albums/A15.png", title: "Endless Things", author: "Ava Cornish", duration: "5:10" },
-];
-
 const Container = () => {
   const navigate = useNavigate();
 
   // State lưu dữ liệu từ API
   const [featuredAlbums, setFeaturedAlbums] = useState<AlbumCard[]>([]);
   const [trendingAlbums, setTrendingAlbums] = useState<AlbumCard[]>([]);
+  const [top15Albums, setTop15Albums] = useState<AlbumCard[]>([]);
   const [loadingAlbums, setLoadingAlbums] = useState<boolean>(true);
 
   // Hàm map dữ liệu từ API sang format form tĩnh
@@ -72,18 +54,21 @@ const Container = () => {
     const fetchAlbums = async () => {
       setLoadingAlbums(true);
       try {
-        // Gọi song song 2 API: Featured và Trending
-        const [allAlbums, trending] = await Promise.all([
+        // Gọi song song 3 API: Featured, Trending và Top 15
+        const [allAlbums, trending, top15] = await Promise.all([
           getAlbums(),
           getTrendingAlbums(6),
+          getTrendingAlbums(15), // Lấy Top 15 Albums
         ]);
 
         // Map dữ liệu sang format form tĩnh
         const featuredCards = allAlbums.slice(0, 6).map(mapAlbumToCard);
         const trendingCards = trending.map(mapAlbumToCard);
+        const top15Cards = top15.map(mapAlbumToCard);
 
         setFeaturedAlbums(featuredCards);
         setTrendingAlbums(trendingCards);
+        setTop15Albums(top15Cards);
       } catch (error) {
         console.error("Lỗi tải danh sách album:", error);
       } finally {
@@ -180,40 +165,54 @@ const Container = () => {
       {/* ---------------- TOP 15 ---------------- */}
       <h3 className="text-[#3BC8E7] ml-[160px] mt-[64px] font-semibold text-[18px]">Top 15 Albums</h3>
 
-      <div className="flex mb-10">
-        {[0, 1, 2].map((col) => (
-          <div key={col} className={`mt-[24px] ${col === 0 ? "ml-[160px]" : "ml-[40px]"}`}>
-            {top15.slice(col * 5, col * 5 + 5).map((item, index) => (
-              <div
-                key={item.id}
-                className="h-[90px] w-[360px] border-b border-[#252B4D] flex items-center hover:bg-[#252B4D]/50 transition rounded-md px-2 cursor-pointer group"
-              >
-                <div className="flex text-white w-full items-center">
-                  <h1 className="text-[32px] font-bold mr-[20px] w-[40px] text-center text-[#3BC8E7]/50 group-hover:text-[#3BC8E7]">
-                    {(col * 5 + index + 1).toString().padStart(2, "0")}
-                  </h1>
+      {loadingAlbums ? (
+        <div className="text-gray-400 text-center py-20 mt-[24px]">
+          <p>Đang tải Top 15 Albums...</p>
+        </div>
+      ) : top15Albums.length === 0 ? (
+        <div className="text-gray-400 text-center py-20 mt-[24px]">
+          <p>Chưa có album nào</p>
+        </div>
+      ) : (
+        <div className="flex mb-10">
+          {[0, 1, 2].map((col) => (
+            <div key={col} className={`mt-[24px] ${col === 0 ? "ml-[160px]" : "ml-[40px]"}`}>
+              {top15Albums.slice(col * 5, col * 5 + 5).map((item, index) => (
+                <div
+                  key={item.id}
+                  onClick={() => handleAlbumClick(item.id)}
+                  className="h-[90px] w-[360px] border-b border-[#252B4D] flex items-center hover:bg-[#252B4D]/50 transition rounded-md px-2 cursor-pointer group"
+                >
+                  <div className="flex text-white w-full items-center">
+                    <h1 className="text-[32px] font-bold mr-[20px] w-[40px] text-center text-[#3BC8E7]/50 group-hover:text-[#3BC8E7]">
+                      {(col * 5 + index + 1).toString().padStart(2, "0")}
+                    </h1>
 
-                  <img
-                    className="w-[50px] h-[50px] rounded-[5px] mr-[15px] object-cover"
-                    src={item.img}
-                    alt={item.title}
-                  />
+                    <img
+                      className="w-[50px] h-[50px] rounded-[5px] mr-[15px] object-cover"
+                      src={item.img}
+                      alt={item.title}
+                      onError={(e) => { (e.target as HTMLImageElement).src = "https://via.placeholder.com/50x50?text=No+Image"; }}
+                    />
 
-                  <div className="flex flex-col flex-1 min-w-0 mr-4">
-                    <h3 className="font-semibold truncate group-hover:text-[#3BC8E7] transition text-[14px]">
-                      {item.title}
-                    </h3>
-                    <h3 className="text-gray-400 truncate text-[12px]">{String(item.author || 'Unknown')}</h3>
+                    <div className="flex flex-col flex-1 min-w-0 mr-4">
+                      <h3 className="font-semibold truncate group-hover:text-[#3BC8E7] transition text-[14px]">
+                        {item.title}
+                      </h3>
+                      <h3 className="text-gray-400 truncate text-[12px]">{String(item.author || 'Unknown')}</h3>
+                    </div>
+
+                    {item.duration && (
+                      <h3 className="text-[13px] mr-4 text-gray-400">{item.duration}</h3>
+                    )}
+                    <HiDotsHorizontal className="text-gray-400 hover:text-white" />
                   </div>
-
-                  <h3 className="text-[13px] mr-4 text-gray-400">{item.duration}</h3>
-                  <HiDotsHorizontal className="text-gray-400 hover:text-white" />
                 </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

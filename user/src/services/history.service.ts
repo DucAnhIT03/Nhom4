@@ -10,6 +10,7 @@ export interface HistoryItem {
     artistId: number;
     albumId?: number;
     fileUrl?: string;
+    type?: 'FREE' | 'PREMIUM';
     views: number;
     createdAt?: string;
     updatedAt?: string;
@@ -71,6 +72,7 @@ export interface MostPlayedItem {
     albumId?: number;
     fileUrl?: string;
     coverImage?: string;
+    type?: 'FREE' | 'PREMIUM';
     views: number;
     createdAt?: string;
     updatedAt?: string;
@@ -107,6 +109,7 @@ export interface FavoriteGenresPopularItem {
     albumId?: number;
     fileUrl?: string;
     coverImage?: string;
+    type?: 'FREE' | 'PREMIUM';
     views: number;
     createdAt?: string;
     updatedAt?: string;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { FaChevronRight, FaChevronLeft } from "react-icons/fa";
 import { HiDotsHorizontal } from "react-icons/hi";
+import { Gem } from "lucide-react";
 import { getTopTracksOfAllTime, getWeeklyTopTracks, type TrendingSong, incrementSongViews } from "../../services/song.service";
 import { getAlbumById } from "../../services/album.service";
 import { addHistory } from "../../services/history.service";
@@ -169,6 +170,26 @@ const Container = () => {
       return;
     }
 
+    // Kiểm tra premium trước khi phát
+    if (song.song.type === 'PREMIUM') {
+      const { canPlayPremiumSong, isSongOwner } = await import('../../utils/premiumCheck');
+      const songArtistId = song.song.artistId || song.song.artist?.id;
+      
+      // Kiểm tra nếu user là chủ sở hữu
+      const isOwner = isSongOwner(songArtistId);
+      
+      if (!isOwner) {
+        const checkResult = await canPlayPremiumSong(
+          { type: song.song.type, artistId: songArtistId }
+        );
+        
+        if (!checkResult.canPlay) {
+          alert(checkResult.reason || 'Bài hát này yêu cầu tài khoản Premium.');
+          return;
+        }
+      }
+    }
+
     const artistName = song.song.artist?.artistName || "Unknown Artist";
     const songData = {
       title: song.song.title,
@@ -176,6 +197,8 @@ const Container = () => {
       image: song.albumCover || "./Toptracks/sing1.jpg",
       audioUrl: song.song.fileUrl,
       id: song.song.id,
+      type: song.song.type,
+      artistId: song.song.artistId,
     };
     
     setCurrentlyPlayingSong(songData);
@@ -188,6 +211,8 @@ const Container = () => {
       image: i.albumCover || "./Toptracks/sing1.jpg",
       audioUrl: i.song.fileUrl || "",
       id: i.song.id,
+      type: i.song.type,
+      artistId: i.song.artistId,
     })).filter(s => s.audioUrl);
     
     const index = queue.findIndex(s => 
@@ -288,8 +313,13 @@ const Container = () => {
                     <FaComment size={14} />
                   </button>
                   <h3 className="font-semibold mb-1">
-                    <span className="hover:text-[#3BC8E7] transition">
+                    <span className="hover:text-[#3BC8E7] transition flex items-center gap-1">
                       {song.song.title}
+                      {song.song.type === 'PREMIUM' && (
+                        <span title="Premium">
+                          <Gem className="w-3 h-3 text-[#3BC8E7]" />
+                        </span>
+                      )}
                     </span>
                   </h3>
                   <h3 className="text-[#DEDEDE] h-[24px]">{artistName}</h3>
@@ -351,8 +381,13 @@ const Container = () => {
                           }}
                         />
                         <span className="mr-[65.92px] text-[14px]">
-                          <h3 className="w-[99px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition">
+                          <h3 className="w-[99px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition flex items-center gap-1">
                             {song.song.title}
+                            {song.song.type === 'PREMIUM' && (
+                              <span title="Premium">
+                                <Gem className="w-3 h-3 text-[#3BC8E7] flex-shrink-0" />
+                              </span>
+                            )}
                           </h3>
                           <h3 className="w-[78px] h-[20px]">{artistName}</h3>
                         </span>
@@ -390,8 +425,13 @@ const Container = () => {
                           }}
                         />
                         <span className="mr-[51px] text-[14px]">
-                          <h3 className="w-[114px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition">
+                          <h3 className="w-[114px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition flex items-center gap-1">
                             {song.song.title}
+                            {song.song.type === 'PREMIUM' && (
+                              <span title="Premium">
+                                <Gem className="w-3 h-3 text-[#3BC8E7] flex-shrink-0" />
+                              </span>
+                            )}
                           </h3>
                           <h3 className="w-[78px] h-[20px]">{artistName}</h3>
                         </span>
@@ -429,8 +469,13 @@ const Container = () => {
                           }}
                         />
                         <span className="mr-[35px] text-[14px]">
-                          <h3 className="w-[126px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition">
+                          <h3 className="w-[126px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition flex items-center gap-1">
                             {song.song.title}
+                            {song.song.type === 'PREMIUM' && (
+                              <span title="Premium">
+                                <Gem className="w-3 h-3 text-[#3BC8E7] flex-shrink-0" />
+                              </span>
+                            )}
                           </h3>
                           <h3 className="w-[78px] h-[20px]">{artistName}</h3>
                         </span>
@@ -509,8 +554,13 @@ const Container = () => {
                           }}
                         />
                         <span className="mr-[6.67px] text-[14px] ml-[20px]">
-                          <h3 className="w-[126px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition">
+                          <h3 className="w-[126px] h-[20px] mb-[6.8px] hover:text-[#3BC8E7] transition flex items-center gap-1">
                             {song.song.title}
+                            {song.song.type === 'PREMIUM' && (
+                              <span title="Premium">
+                                <Gem className="w-3 h-3 text-[#3BC8E7] flex-shrink-0" />
+                              </span>
+                            )}
                           </h3>
                           <h3 className="w-[78px] h-[20px]">{artistName}</h3>
                         </span>

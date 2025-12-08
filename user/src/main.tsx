@@ -31,6 +31,11 @@ const Playlist = lazy(() => import("./pages/Playlist.tsx"));
 // Đây là trang đích sau khi đăng nhập với role Artist
 const ArtistDashboard = lazy(() => import("./pages/ArtistDashboard.tsx"));
 
+// 6. SUBSCRIPTION & PAYMENT PAGES
+const Upgrade = lazy(() => import("./pages/Upgrade.tsx"));
+const Payment = lazy(() => import("./pages/Payment.tsx"));
+const PaymentCallback = lazy(() => import("./pages/PaymentCallback.tsx"));
+
 
 // --- ROUTER CONFIGURATION ---
 const router = createBrowserRouter([
@@ -93,6 +98,20 @@ const router = createBrowserRouter([
     // Đường dẫn này khớp với code: window.location.href = "/artist/dashboard"
     path: "artist/dashboard", 
     element: <ArtistDashboard />,
+  },
+
+  // === SUBSCRIPTION & PAYMENT ROUTES ===
+  {
+    path: "upgrade",
+    element: <Upgrade />,
+  },
+  {
+    path: "payment",
+    element: <Payment />,
+  },
+  {
+    path: "payment/callback",
+    element: <PaymentCallback />,
   },
 
   // === REDIRECT ROUTES (Xử lý các route không tồn tại) ===

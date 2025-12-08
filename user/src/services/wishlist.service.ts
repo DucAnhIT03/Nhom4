@@ -15,6 +15,7 @@ export interface WishlistItem {
     artistId: number;
     albumId?: number;
     fileUrl?: string;
+    type?: 'FREE' | 'PREMIUM';
     views: number;
     createdAt?: string;
     updatedAt?: string;

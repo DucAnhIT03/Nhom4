@@ -9,15 +9,9 @@ import {
   IoShuffleOutline,
   IoRepeatOutline,
   IoRepeat,
+  IoCloseSharp,
 } from "react-icons/io5";
-import { useMusic } from "../../contexts/MusicContext";
-
-interface Song {
-  title: string;
-  artist: string;
-  image: string;
-  audioUrl: string;
-}
+import { useMusic, type Song } from "../../contexts/MusicContext";
 
 interface MusicPlayerBarProps {
   song: Song | null;
@@ -34,6 +28,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const {
     currentlyPlayingSong: contextSong,
+    setCurrentlyPlayingSong,
     isShuffle,
     setIsShuffle,
     repeatMode,
@@ -74,81 +69,126 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Dừng tất cả audio khác trước khi phát bài mới
-    stopAllAudio(audio);
-
-    // Nếu đang phát cùng một bài thì không reload (tránh reload không cần thiết)
-    const currentSrc = audio.src || '';
-    const newSrc = song.audioUrl;
-    
-    // So sánh URL đơn giản - chỉ reload nếu URL thay đổi
-    if (currentSrc && currentSrc === newSrc) {
-      // Nếu đang phát cùng bài, chỉ cập nhật volume nếu cần
-      if (audio.volume !== volume) {
-        audio.volume = volume;
+    // Kiểm tra premium trước khi phát
+    const checkPremiumAndPlay = async (): Promise<(() => void) | void> => {
+      if (song.type === 'PREMIUM') {
+        const { canPlayPremiumSong, isSongOwner } = await import('../../utils/premiumCheck');
+        const songArtistId = song.artistId;
+        
+        // Kiểm tra nếu user là chủ sở hữu
+        const isOwner = isSongOwner(songArtistId);
+        
+        if (!isOwner) {
+          const checkResult = await canPlayPremiumSong(
+            { type: song.type, artistId: songArtistId }
+          );
+          
+          if (!checkResult.canPlay) {
+            // Không có quyền phát, tự động chuyển sang bài tiếp theo
+            console.log('Skipping premium song:', song.title);
+            playNext();
+            return;
+          }
+        }
       }
-      return;
-    }
 
-    // Reset state
-    setCurrentTime(0);
-    setDuration(0);
-    setIsPlaying(false);
+      // Dừng tất cả audio khác trước khi phát bài mới
+      stopAllAudio(audio);
 
-    audio.src = song.audioUrl;
-    audio.load();
-
-    // Cần chờ metadata để lấy duration
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-    };
-
-    // Update current time (chỉ khi không đang kéo)
-    const updateTime = () => {
-      if (!isDraggingRef.current) {
-        setCurrentTime(audio.currentTime);
+      // Nếu đang phát cùng một bài thì không reload (tránh reload không cần thiết)
+      const currentSrc = audio.src || '';
+      const newSrc = song.audioUrl;
+      
+      // So sánh URL đơn giản - chỉ reload nếu URL thay đổi
+      if (currentSrc && currentSrc === newSrc) {
+        // Nếu đang phát cùng bài, chỉ cập nhật volume nếu cần
+        if (audio.volume !== volume) {
+          audio.volume = volume;
+        }
+        return;
       }
-    };
 
-    // Handle play/pause state
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => {
-      setIsPlaying(false);
+      // Reset state
       setCurrentTime(0);
-      // Tự động chuyển bài tiếp theo khi hết
-      if (repeatMode === 'one') {
-        // Lặp lại bài hiện tại
-        audio.currentTime = 0;
-        audio.play().catch(console.error);
-      } else {
-        // Chuyển sang bài tiếp theo
-        // Sử dụng setTimeout để đảm bảo state đã được cập nhật
-        setTimeout(() => {
-          playNext();
-        }, 100);
-      }
+      setDuration(0);
+      setIsPlaying(false);
+
+      audio.src = song.audioUrl;
+      audio.load();
+
+      // Cần chờ metadata để lấy duration
+      const handleLoadedMetadata = () => {
+        setDuration(audio.duration);
+      };
+
+      // Update current time (chỉ khi không đang kéo)
+      const updateTime = () => {
+        if (!isDraggingRef.current) {
+          setCurrentTime(audio.currentTime);
+        }
+      };
+
+      // Handle play/pause state
+      const handlePlay = () => setIsPlaying(true);
+      const handlePause = () => setIsPlaying(false);
+      const handleEnded = () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        // Tự động chuyển bài tiếp theo khi hết
+        if (repeatMode === 'one') {
+          // Lặp lại bài hiện tại
+          audio.currentTime = 0;
+          audio.play().catch(console.error);
+        } else {
+          // Chuyển sang bài tiếp theo
+          // Sử dụng setTimeout để đảm bảo state đã được cập nhật
+          setTimeout(() => {
+            playNext();
+          }, 100);
+        }
+      };
+
+      audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.addEventListener("timeupdate", updateTime);
+      audio.addEventListener("play", handlePlay);
+      audio.addEventListener("pause", handlePause);
+      audio.addEventListener("ended", handleEnded);
+
+      audio.volume = volume;
+      audio.play().catch((error) => {
+        console.error("Lỗi phát nhạc:", error);
+        setIsPlaying(false);
+      });
+      setIsPlaying(true);
+
+      // Return cleanup function
+      return () => {
+        audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+        audio.removeEventListener("timeupdate", updateTime);
+        audio.removeEventListener("play", handlePlay);
+        audio.removeEventListener("pause", handlePause);
+        audio.removeEventListener("ended", handleEnded);
+      };
     };
 
-    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-    audio.addEventListener("timeupdate", updateTime);
-    audio.addEventListener("play", handlePlay);
-    audio.addEventListener("pause", handlePause);
-    audio.addEventListener("ended", handleEnded);
+    let cleanupHandlers: (() => void) | undefined;
 
-    audio.volume = volume;
-    audio.play().catch((error) => {
-      console.error("Lỗi phát nhạc:", error);
-      setIsPlaying(false);
+    checkPremiumAndPlay().then((cleanup) => {
+      if (cleanup) {
+        cleanupHandlers = cleanup;
+      }
     });
-    setIsPlaying(true);
 
+    // Cleanup function
     return () => {
-      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
-      audio.removeEventListener("timeupdate", updateTime);
-      audio.removeEventListener("play", handlePlay);
-      audio.removeEventListener("pause", handlePause);
-      audio.removeEventListener("ended", handleEnded);
+      if (cleanupHandlers) {
+        cleanupHandlers();
+      }
+      const audio = audioRef.current;
+      if (audio) {
+        audio.pause();
+        audio.src = '';
+      }
     };
   }, [song, volume, repeatMode, playNext, stopAllAudio]);
 
@@ -198,13 +238,31 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
     setIsMuted(!isMuted);
   };
 
+  const handleClose = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    setCurrentlyPlayingSong(null);
+  };
+
   if (!song) return null;
 
   return (
     <>
       <audio ref={audioRef} />
 
-      <div className="fixed bottom-0 left-0 w-full bg-[#181C33] text-white h-[90px] px-6 py-3 grid grid-cols-3 gap-4 z-50 border-t border-[#252B4D]">
+      <div className="fixed bottom-0 left-0 right-0 w-full bg-[#181C33] text-white h-[90px] px-6 py-3 grid grid-cols-3 gap-4 z-[9999] border-t border-[#252B4D]">
+
+        {/* Close Button */}
+        <button
+          onClick={handleClose}
+          className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          title="Đóng"
+        >
+          <IoCloseSharp size={20} />
+        </button>
 
         {/* Left */}
         <div className="flex items-center">
