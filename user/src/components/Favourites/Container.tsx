@@ -10,7 +10,7 @@ import { incrementSongViews } from "../../services/song.service";
 import { addHistory, getHistory, type HistoryItem } from "../../services/history.service";
 import CustomAudioPlayer from "../../shared/components/CustomAudioPlayer";
 import { useMusic } from "../../contexts/MusicContext";
-import MusicPlayerBar from "../HomePage/MusicPlayerBar";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { FaComment } from "react-icons/fa";
 import CommentModal from "../Comments/CommentModal";
 
@@ -37,6 +37,7 @@ const Container = () => {
     audioUrl: string;
   } | null>(null);
   const { setQueue, setCurrentlyPlayingSong: setContextSong, setCurrentIndex: setContextIndex } = useMusic();
+  const { t } = useLanguage();
   const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
     isOpen: false,
     songId: 0,
@@ -265,7 +266,7 @@ const Container = () => {
   if (loading) {
     return (
       <div className="mt-[43px] flex justify-center items-center h-[400px]">
-        <span className="text-white text-lg">Đang tải...</span>
+        <span className="text-white text-lg">{t('common.loading')}</span>
       </div>
     );
   }
@@ -275,7 +276,7 @@ const Container = () => {
       {/* --- TITLE --- */}
       <div className="flex justify-between mt-[-511px]">
         <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">
-          Favourites
+          {t('favourites.title')}
         </span>
       </div>
 
@@ -283,8 +284,8 @@ const Container = () => {
       <div className="flex justify-center mt-[50px]">
         {songs.length === 0 ? (
           <div className="text-center text-gray-400 py-20">
-            <p className="text-lg mb-2">Chưa có bài hát yêu thích nào</p>
-            <p className="text-sm">Hãy thêm bài hát vào yêu thích để xem ở đây</p>
+            <p className="text-lg mb-2">{t('favourites.noFavoritesMessage')}</p>
+            <p className="text-sm">{t('favourites.addFavoritesHint')}</p>
           </div>
         ) : (
           <table className="w-[1200px] text-left border-separate border-spacing-y-2 opacity-100">
@@ -293,9 +294,9 @@ const Container = () => {
                 <th className="w-[40px] py-3">#</th>
                 <th className="py-3">Song Title</th>
                 <th className="py-3">Album</th>
-                <th className="py-3 w-[400px] min-w-[350px]">Nghe</th>
-                <th className="py-3 text-center w-[80px]">Comment</th>
-                <th className="py-3 text-center w-[80px]">Remove</th>
+                <th className="py-3 w-[400px] min-w-[350px]">{t('common.play')}</th>
+                <th className="py-3 text-center w-[80px]">{t('common.comment')}</th>
+                <th className="py-3 text-center w-[80px]">{t('common.remove')}</th>
               </tr>
             </thead>
 
@@ -391,7 +392,7 @@ const Container = () => {
               transition-all duration-200
             "
           >
-            {showAll ? "Show Less" : "View More"}
+            {showAll ? t('common.showLess') : t('common.viewMore')}
           </button>
         </div>
       )}
@@ -400,16 +401,16 @@ const Container = () => {
       <div className="mt-[80px] mb-[60px]">
         <div className="flex justify-between items-center">
           <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">
-            Recently Played
+            {t('common.recentlyPlayed')}
           </span>
           <span className="mr-[165px] text-white text-[15px] cursor-pointer hover:text-[#3BC8E7] transition">
-            View more
+            {t('common.viewMore')}
           </span>
         </div>
 
         {recentlyPlayed.length === 0 ? (
           <div className="text-center text-gray-400 py-20 mt-[32px]">
-            <p className="text-lg mb-2">Chưa có bài hát nào được phát gần đây</p>
+            <p className="text-lg mb-2">{t('common.noSongs')}</p>
           </div>
         ) : (
           <div className="flex gap-[30px] mt-[32px] ml-[120px] items-center">
@@ -469,8 +470,6 @@ const Container = () => {
           </div>
         )}
       </div>
-
-      <MusicPlayerBar song={currentlyPlayingSong} />
 
       {/* Comment Modal */}
       <CommentModal

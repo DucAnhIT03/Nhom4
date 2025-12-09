@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { IoClose } from "react-icons/io5";
 import { FaChevronRight, FaChevronLeft, FaHeart, FaRegHeart } from "react-icons/fa";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 // Định nghĩa kiểu dữ liệu cho bài hát
 interface Song {
@@ -44,7 +45,7 @@ const AlbumSection = ({ title, items }: { title: string; items: AlbumItem[] }) =
     <div className="flex justify-between items-center mb-8">
       <span className="text-[#3BC8E7] text-lg font-semibold">{title}</span>
       <span className="text-white text-[15px] cursor-pointer hover:text-[#3BC8E7] transition">
-        View more
+        {t('common.viewMore')}
       </span>
     </div>
 
@@ -79,6 +80,7 @@ const AlbumSection = ({ title, items }: { title: string; items: AlbumItem[] }) =
 );
 
 const Container = () => {
+  const { t } = useLanguage();
   const [showAll, setShowAll] = useState(false);
   const [favorites, setFavorites] = useState<number[]>([]);
 
@@ -97,7 +99,7 @@ const Container = () => {
       {/* --- FREE DOWNLOADS HEADER --- */}
       <div className="flex justify-between items-center mb-6">
         <span className="text-[#3BC8E7] text-[18px] font-semibold">
-          Free Downloads
+          {t('downloads.title')}
         </span>
       </div>
 
@@ -107,11 +109,11 @@ const Container = () => {
           <thead>
             <tr className="text-[#3BC8E7] text-[14px] border-b border-[#2E3358]">
               <th className="py-3 w-12">#</th>
-              <th className="py-3">Song Title</th>
-              <th className="py-3">Album</th>
+              <th className="py-3">{t('common.songTitle')}</th>
+              <th className="py-3">{t('common.album')}</th>
               <th className="py-3">Duration</th>
-              <th className="py-3 text-center">Add To Favourites</th>
-              <th className="py-3 text-center">Remove</th>
+              <th className="py-3 text-center">{t('common.addToFavorites')}</th>
+              <th className="py-3 text-center">{t('common.remove')}</th>
             </tr>
           </thead>
 
@@ -159,7 +161,7 @@ const Container = () => {
           className="bg-[#3BC8E7] text-[#0A0F1C] text-[16px] font-semibold rounded-full px-8 py-3 hover:bg-[#2CA8C2] transition-all duration-200 shadow-lg hover:shadow-[#3BC8E7]/30"
         >
           {/* Logic hiển thị text đúng */}
-          {showAll ? "Show Less" : "View More"}
+          {showAll ? t('common.showLess') : t('common.viewMore')}
         </button>
       </div>
 

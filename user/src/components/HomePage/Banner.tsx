@@ -3,11 +3,13 @@ import { getActiveBanners, type Banner as BannerType } from '../../services/bann
 import { getSongById } from '../../services/song.service';
 import { toggleWishlist } from '../../services/wishlist.service';
 import { useMusic } from '../../contexts/MusicContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Banner = () => {
   const [banner, setBanner] = useState<BannerType | null>(null);
   const [loading, setLoading] = useState(false);
   const { setCurrentlyPlayingSong } = useMusic();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const fetchBanner = async () => {
@@ -21,7 +23,7 @@ const Banner = () => {
 
   const handleListenNow = async () => {
     if (!banner?.songId) {
-      alert('Banner chưa có bài hát được setup!');
+      alert(t('banner.noSongSetup'));
       return;
     }
 
@@ -43,7 +45,7 @@ const Banner = () => {
             );
             
             if (!checkResult.canPlay) {
-              alert(checkResult.reason || 'Bài hát này yêu cầu tài khoản Premium.');
+              alert(checkResult.reason || t('alerts.premiumRequired'));
               setLoading(false);
               return;
             }
@@ -52,7 +54,7 @@ const Banner = () => {
 
         setCurrentlyPlayingSong({
           title: song.title,
-          artist: song.artist?.artistName || 'Unknown Artist',
+          artist: song.artist?.artistName || t('common.unknownArtist'),
           image: song.coverImage || banner.imageUrl,
           audioUrl: song.fileUrl,
           id: song.id,
@@ -60,11 +62,11 @@ const Banner = () => {
           artistId: song.artistId,
         });
       } else {
-        alert('Không tìm thấy bài hát hoặc bài hát chưa có file!');
+        alert(t('banner.songNotFound'));
       }
     } catch (error) {
       console.error('Error playing song:', error);
-      alert('Có lỗi xảy ra khi phát nhạc!');
+      alert(t('banner.playError'));
     } finally {
       setLoading(false);
     }
@@ -72,13 +74,13 @@ const Banner = () => {
 
   const handleAddToQueue = async () => {
     if (!banner?.songId) {
-      alert('Banner chưa có bài hát được setup!');
+      alert(t('banner.noSongSetup'));
       return;
     }
 
     const userId = localStorage.getItem('userId');
     if (!userId) {
-      alert('Vui lòng đăng nhập để thêm vào yêu thích!');
+      alert(t('banner.pleaseLogin'));
       return;
     }
 
@@ -86,13 +88,13 @@ const Banner = () => {
     try {
       const result = await toggleWishlist(Number(userId), banner.songId);
       if (result.isFavorite) {
-        alert('Đã thêm vào danh sách yêu thích!');
+        alert(t('banner.addedToFavorites'));
       } else {
-        alert('Đã xóa khỏi danh sách yêu thích!');
+        alert(t('banner.removedFromFavorites'));
       }
     } catch (error) {
       console.error('Error adding to wishlist:', error);
-      alert('Có lỗi xảy ra khi thêm vào yêu thích!');
+      alert(t('banner.addToFavoritesError'));
     } finally {
       setLoading(false);
     }
@@ -139,7 +141,7 @@ const Banner = () => {
             disabled={loading || !banner?.songId}
             className="w-[150px] h-[49px] bg-[#3BC8E7] rounded-2xl items-center mr-[29.75px] text-white transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_10px_#3BC8E7] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Loading...' : 'Listen Now'}
+            {loading ? t('common.loading') : t('banner.listenNow')}
           </button>
 
            <button 
@@ -147,7 +149,7 @@ const Banner = () => {
             disabled={loading || !banner?.songId}
             className="w-[150px] h-[49px] bg-[#3BC8E7] rounded-2xl items-center text-white transition-all duration-300 hover:brightness-125 hover:shadow-[0_0_10px_#3BC8E7] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Loading...' : 'Add To Queue'}
+            {loading ? t('common.loading') : t('banner.addToFavorites')}
           </button>
           
         </div>

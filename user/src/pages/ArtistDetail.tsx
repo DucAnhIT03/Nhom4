@@ -14,6 +14,7 @@ import { getAlbumById } from "../services/album.service";
 import CustomAudioPlayer from "../shared/components/CustomAudioPlayer";
 import { FaComment } from "react-icons/fa";
 import CommentModal from "../components/Comments/CommentModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // Định nghĩa kiểu dữ liệu form tĩnh
 interface Song {
@@ -30,6 +31,7 @@ interface Song {
 const ArtistDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   // State lưu trữ dữ liệu
   const [artist, setArtist] = useState<Artist | null>(null);
@@ -47,7 +49,7 @@ const ArtistDetail = () => {
 
   // Hàm map dữ liệu từ API sang format form tĩnh
   const mapSongToForm = (song: ApiSong): Song => {
-    let artistName = "Unknown";
+    let artistName = t('common.unknown');
     if (song.artist) {
       if (typeof song.artist === 'string') {
         artistName = song.artist;
@@ -127,7 +129,7 @@ const ArtistDetail = () => {
         // Load thông tin album cho mỗi bài hát
         const songsWithAlbum = await Promise.all(
           songsData.map(async (song) => {
-            let albumName = "Unknown Album";
+            let albumName = t('common.unknownAlbum');
             if (song.albumId) {
               try {
                 const album = await getAlbumById(song.albumId);
@@ -188,7 +190,7 @@ const ArtistDetail = () => {
     }
 
     if (!currentUserId) {
-      alert("Vui lòng đăng nhập để thêm bài hát vào yêu thích");
+      alert(t('alerts.pleaseLogin'));
       return;
     }
 
@@ -202,7 +204,7 @@ const ArtistDetail = () => {
       }
     } catch (error) {
       console.error("Lỗi khi toggle wishlist:", error);
-      alert("Có lỗi xảy ra khi cập nhật yêu thích");
+      alert(t('alerts.unknownError'));
     }
   };
 
@@ -212,7 +214,7 @@ const ArtistDetail = () => {
         <Header />
         <Sidebar />
         <div className="flex justify-center items-center h-screen ml-[160px]">
-          <span className="text-white text-lg">Đang tải...</span>
+          <span className="text-white text-lg">{t('common.loading')}</span>
         </div>
         <Footer />
       </div>
@@ -225,12 +227,12 @@ const ArtistDetail = () => {
         <Header />
         <Sidebar />
         <div className="flex flex-col justify-center items-center h-screen ml-[160px]">
-          <span className="text-white text-lg mb-4">Không tìm thấy nghệ sĩ</span>
+          <span className="text-white text-lg mb-4">{t('common.artists')} {t('common.notFound')}</span>
           <button 
             onClick={() => navigate(-1)} 
             className="flex items-center gap-2 text-[#3BC8E7] hover:text-white transition"
           >
-            <FaArrowLeft /> Quay lại
+            <FaArrowLeft /> {t('common.goBack')}
           </button>
         </div>
         <Footer />
@@ -249,7 +251,7 @@ const ArtistDetail = () => {
           onClick={() => navigate(-1)} 
           className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition duration-200"
         >
-          <FaArrowLeft /> Back
+          <FaArrowLeft /> {t('common.goBack')}
         </button>
 
         {/* ARTIST HEADER INFO */}
@@ -264,7 +266,7 @@ const ArtistDetail = () => {
           </div>
 
           <div className="flex flex-col gap-3 mb-2">
-            <span className="uppercase text-sm font-bold text-[#3BC8E7] tracking-wider">Nghệ sĩ</span>
+            <span className="uppercase text-sm font-bold text-[#3BC8E7] tracking-wider">{t('common.artists')}</span>
             <h1 className="text-5xl font-bold leading-tight text-white">{artist.artistName}</h1>
             
             {artist.bio && (
@@ -274,7 +276,7 @@ const ArtistDetail = () => {
             )}
             
             <p className="text-gray-400 text-sm max-w-xl mt-2">
-              {songs.length} bài hát
+              {songs.length} {t('common.songs')}
             </p>
           </div>
         </div>
@@ -285,10 +287,10 @@ const ArtistDetail = () => {
             <span className="text-center flex items-center justify-center">
               <FaHeart className="text-sm" />
             </span>
-            <span>Title</span>
-            <span>Album</span>
-            <span className="text-center">Comment</span>
-            <span className="text-center">Nghe</span>
+            <span>{t('common.title')}</span>
+            <span>{t('common.album')}</span>
+            <span className="text-center">{t('common.comment')}</span>
+            <span className="text-center">{t('common.play')}</span>
           </div>
 
           <div className="flex flex-col mt-2">
@@ -320,7 +322,7 @@ const ArtistDetail = () => {
                       </div>
                     </div>
                     <div className="text-gray-400 text-sm hover:text-white transition">
-                      {song.albumName || "Unknown Album"}
+                      {song.albumName || t('common.unknownAlbum')}
                     </div>
                     <div className="flex items-center justify-center">
                       <button
@@ -364,7 +366,7 @@ const ArtistDetail = () => {
                 );
               })
             ) : (
-              <div className="text-center text-gray-500 py-10">Chưa có bài hát nào của nghệ sĩ này.</div>
+              <div className="text-center text-gray-500 py-10">{t('common.noSongs')}</div>
             )}
           </div>
         </div>

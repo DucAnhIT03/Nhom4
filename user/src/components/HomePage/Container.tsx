@@ -1,10 +1,10 @@
 import axios from "axios";
 import { useState, useEffect } from "react";
-import MusicPlayerBar from "./MusicPlayerBar";
 import { FaChevronRight, FaChevronLeft } from "react-icons/fa";
 import { HiDotsHorizontal } from "react-icons/hi";
 import { Gem } from "lucide-react";
 import { useMusic, type Song } from "../../contexts/MusicContext";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { getArtists, type ArtistWithTotalViews } from "../../services/artist.service";
 import { getSongsByArtistId, getNewReleases } from "../../services/song.service";
 import { getAlbums } from "../../services/album.service";
@@ -13,6 +13,7 @@ import { FaComment } from "react-icons/fa";
 
 const Container = () => {
   const { currentlyPlayingSong, setCurrentlyPlayingSong, setQueue, setCurrentIndex } = useMusic();
+  const { t } = useLanguage();
   const [songs, setSongs] = useState<any[]>([]); // Recently Played
   const [weeklySongs, setWeeklySongs] = useState<any[]>([]); // Weekly Top 15
   const [featuredAlbums, setFeaturedAlbums] = useState<any[]>([]); // State mới cho Featured Albums
@@ -260,7 +261,7 @@ const Container = () => {
         {/* === RECENTLY PLAYED === */}
         <div className="flex justify-between">
           <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">
-            Recently Played
+            {t('homepage.recentlyPlayed')}
           </span>
         </div>
 
@@ -293,7 +294,7 @@ const Container = () => {
                   });
                 }}
                 className="absolute top-2 right-2 bg-[#3BC8E7] text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Xem bình luận"
+                title={t('common.comment')}
               >
                 <FaComment size={14} />
               </button>
@@ -307,7 +308,7 @@ const Container = () => {
         <div>
           <div>
             <h3 className="text-[#3BC8E7] w-[133px] h-[26px] ml-[160px] mt-[64px] text-[18px] font-semibold">
-              Weekly Top 15
+              {t('homepage.weeklyTop15')}
             </h3>
           </div>
 
@@ -332,9 +333,9 @@ const Container = () => {
         <div className="mt-[64px]">
           <div className="flex justify-between">
             <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold ">
-              Featured Artists
+              {t('homepage.featuredArtists')}
             </span>
-            <span className="mr-[165px] text-white text-[15px]">View more</span>
+            <span className="mr-[165px] text-white text-[15px]">{t('common.viewMore')}</span>
           </div>
 
           <div className="flex gap-[30px] mt-[32px] ml-[120px]">
@@ -410,9 +411,9 @@ const Container = () => {
         <div className="mt-[64px]">
           <div className="flex justify-between">
             <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold ">
-              New Releases
+              {t('homepage.newReleases')}
             </span>
-            <span className="mr-[165px] text-white text-[15px]">View more</span>
+            <span className="mr-[165px] text-white text-[15px]">{t('common.viewMore')}</span>
           </div>
           <div className="w-[1200px] h-[83px] ">
             <div className="w-[1200px] h-[10px] ml-[160px] mt-[24px]">
@@ -533,9 +534,9 @@ const Container = () => {
         <div className="mt-[64px]">
           <div className="flex justify-between h-[26px]">
             <span className="ml-[160px] text-[#3BC8E7]  text-[18px] font-semibold ">
-              Featured Albums
+              {t('homepage.featuredAlbums')}
             </span>
-            <span className="mr-[165px] text-white text-[15px]">View more</span>
+            <span className="mr-[165px] text-white text-[15px]">{t('common.viewMore')}</span>
           </div>
           
           <div className="flex gap-[30px] mt-[32px] ml-[120px]">
@@ -640,8 +641,6 @@ const Container = () => {
         </div>
 
       </div>
-
-      <MusicPlayerBar song={currentlyPlayingSong} />
 
       {/* Comment Modal */}
       <CommentModal

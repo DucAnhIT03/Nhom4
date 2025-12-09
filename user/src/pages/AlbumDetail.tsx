@@ -13,6 +13,7 @@ import { getCurrentUser } from "../services/auth.service";
 import { addHistory } from "../services/history.service";
 import CustomAudioPlayer from "../shared/components/CustomAudioPlayer";
 import CommentModal from "../components/Comments/CommentModal";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // Định nghĩa kiểu dữ liệu form tĩnh
 interface Song {
@@ -39,6 +40,7 @@ interface AlbumDetail {
 const AlbumDetail = () => {
   const { id } = useParams(); 
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   // State lưu trữ dữ liệu album
   const [album, setAlbum] = useState<AlbumDetail | null>(null);
@@ -59,7 +61,7 @@ const AlbumDetail = () => {
   // Hàm map dữ liệu từ API sang format form tĩnh
   const mapSongToForm = (song: ApiSong): Song => {
     // Đảm bảo artist luôn là string
-    let artistName = "Unknown";
+    let artistName = t('common.unknown');
     if (song.artist) {
       if (typeof song.artist === 'string') {
         artistName = song.artist;
@@ -140,12 +142,12 @@ const AlbumDetail = () => {
         const fullAlbumData: AlbumDetail = {
           id: albumData.id.toString(),
           title: albumData.title,
-          author: albumData.artist?.artistName || albumData.genre?.genreName || "Unknown",
+          author: albumData.artist?.artistName || albumData.genre?.genreName || t('common.unknown'),
           coverInfo: albumData.releaseDate 
             ? new Date(albumData.releaseDate).toLocaleDateString('vi-VN')
             : "N/A",
           img: albumData.coverImage || "https://via.placeholder.com/250",
-          description: `${albumData.type === 'PREMIUM' ? 'Premium Album' : 'Free Album'} • ${mappedSongs.length} bài hát`,
+          description: `${albumData.type === 'PREMIUM' ? t('common.premiumAlbum') : t('common.freeAlbum')} • ${mappedSongs.length} ${t('common.songs')}`,
           songs: mappedSongs,
         };
 
@@ -224,7 +226,7 @@ const AlbumDetail = () => {
   if (loading) {
     return (
         <div className="w-[1520px] min-h-screen bg-[#14182A] flex items-center justify-center text-white">
-            Loading Album...
+            {t('common.loading')}
         </div>
     );
   }
@@ -232,8 +234,8 @@ const AlbumDetail = () => {
   if (!album) {
     return (
         <div className="w-[1520px] min-h-screen bg-[#14182A] flex flex-col items-center justify-center text-white">
-            <h2 className="text-2xl font-bold mb-4">Album not found</h2>
-            <button onClick={() => navigate(-1)} className="text-[#3BC8E7] underline">Go Back</button>
+            <h2 className="text-2xl font-bold mb-4">{t('common.album')} {t('common.notFound')}</h2>
+            <button onClick={() => navigate(-1)} className="text-[#3BC8E7] underline">{t('common.goBack')}</button>
         </div>
     );
   }
@@ -267,7 +269,7 @@ const AlbumDetail = () => {
     }
 
     if (!currentUserId) {
-      alert("Vui lòng đăng nhập để thêm bài hát vào yêu thích");
+      alert(t('alerts.pleaseLogin'));
       return;
     }
 
@@ -282,7 +284,7 @@ const AlbumDetail = () => {
       }
     } catch (error) {
       console.error("Lỗi khi toggle wishlist:", error);
-      alert("Có lỗi xảy ra khi cập nhật yêu thích");
+      alert(t('alerts.unknownError'));
     }
   };
 
@@ -297,7 +299,7 @@ const AlbumDetail = () => {
             onClick={() => navigate(-1)} 
             className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition duration-200"
         >
-            <FaArrowLeft /> Back
+            <FaArrowLeft /> {t('common.goBack')}
         </button>
 
         {/* ALBUM HEADER INFO */}
@@ -312,7 +314,7 @@ const AlbumDetail = () => {
           </div>
 
           <div className="flex flex-col gap-3 mb-2">
-            <span className="uppercase text-sm font-bold text-[#3BC8E7] tracking-wider">Album</span>
+            <span className="uppercase text-sm font-bold text-[#3BC8E7] tracking-wider">{t('common.album')}</span>
             <h1 className="text-5xl font-bold leading-tight text-white">{album.title}</h1>
             
             <div className="flex items-center gap-2 text-gray-300 text-sm mt-2">
@@ -336,7 +338,7 @@ const AlbumDetail = () => {
                 }`}
               >
                 {isPlaying ? <FaPause /> : <FaPlay className="ml-1"/>} 
-                {isPlaying ? "Pause" : "Play"}
+                {isPlaying ? t('common.pause') : t('common.play')}
               </button>
               <button className="w-[48px] h-[48px] rounded-full border border-gray-500 flex items-center justify-center hover:border-white hover:text-white text-gray-400 transition">
                   <FaRegHeart className="text-xl"/>
@@ -354,10 +356,10 @@ const AlbumDetail = () => {
             <span className="text-center flex items-center justify-center">
               <FaHeart className="text-sm" />
             </span>
-            <span>Title</span>
-            <span>Artist</span>
-            <span className="text-center">Comment</span>
-            <span className="text-center">Nghe</span>
+            <span>{t('common.songTitle')}</span>
+            <span>{t('common.artists')}</span>
+            <span className="text-center">{t('common.comment')}</span>
+            <span className="text-center">{t('common.play')}</span>
           </div>
 
           <div className="flex flex-col mt-2">
@@ -389,7 +391,7 @@ const AlbumDetail = () => {
                             </div>
                         </div>
                         <div className="text-gray-400 text-sm hover:text-white transition">
-                            {String(song.artist || 'Unknown')}
+                            {String(song.artist || t('common.unknown'))}
                         </div>
                         <div className="flex items-center justify-center">
                             <button
@@ -402,7 +404,7 @@ const AlbumDetail = () => {
                                     });
                                 }}
                                 className="text-gray-400 hover:text-[#3BC8E7] transition flex items-center gap-1"
-                                title="Xem bình luận"
+                                title={t('common.comment')}
                             >
                                 <FaComment />
                             </button>
@@ -438,7 +440,7 @@ const AlbumDetail = () => {
                     );
                 })
             ) : (
-                <div className="text-center text-gray-500 py-10">Chưa có bài hát nào trong album này.</div>
+                <div className="text-center text-gray-500 py-10">{t('common.noSongs')}</div>
             )}
           </div>
 

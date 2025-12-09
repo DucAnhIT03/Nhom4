@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { FaSearch } from "react-icons/fa";
-import { IoLanguage } from "react-icons/io5";
 import AuthModal from "../LoginRegister/AuthModal";
 import UserMenuDropdown from "../UserMenu/UserMenuDropdown";
+import LanguageDropdown from "../Language/LanguageDropdown";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const Header: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -13,6 +14,7 @@ const Header: React.FC = () => {
   const [userName, setUserName] = useState<string | null>(null);
 
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   // Avatar mặc định theo role
   const getDefaultAvatar = (role: string | null) => {
@@ -159,28 +161,26 @@ const Header: React.FC = () => {
           <div className="flex items-center w-[260px] h-10 rounded-md overflow-hidden shadow border bg-amber-50">
             <input
               className="flex-1 px-3 text-sm text-gray-600"
-              placeholder="Search Music..."
+              placeholder={t('common.searchPlaceholder')}
             />
             <button className="w-[46px] h-full bg-[#25C3E7] flex items-center justify-center">
               <FaSearch className="text-white" size={14} />
             </button>
           </div>
-          <span className="text-[#3BC8E7] ml-[35px] text-[15px]">Trending Songs :</span>
+          <span className="text-[#3BC8E7] ml-[35px] text-[15px]">{t('common.trendingSongs')} :</span>
           <span className="text-white ml-1 text-[15px]">Dream your moments, Until I Met You, Gim</span>
           <button
             onClick={() => navigate("/upgrade")}
             className="ml-[35px] bg-gradient-to-r from-[#3BC8E7] to-[#25C3E7] text-white px-4 py-1.5 rounded-lg text-[14px] font-semibold hover:from-[#2ba8c7] hover:to-[#1fa3c2] transition-all shadow-lg relative group"
             title="Chọn gói phù hợp với bạn và tận hưởng trải nghiệm âm nhạc không giới hạn"
           >
-            Nâng cấp tài khoản Premium
+            {t('common.upgradePremium')}
           </button>
         </div>
 
         {/* RIGHT SIDE */}
         <div className="flex items-center space-x-6 text-white">
-          <div className="flex items-center cursor-pointer">
-            Languages <IoLanguage className="ml-2" />
-          </div>
+          <LanguageDropdown />
 
           {/* Chưa đăng nhập */}
           {!role && (
@@ -189,13 +189,13 @@ const Header: React.FC = () => {
                 onClick={() => openModal("register")}
                 className="bg-[#3BC8E7] w-[100px] h-[48px] rounded-2xl font-semibold"
               >
-                Register
+                {t('common.register')}
               </button>
               <button
                 onClick={() => openModal("login")}
                 className="bg-[#3BC8E7] w-[100px] h-[48px] rounded-2xl font-semibold"
               >
-                Login
+                {t('common.login')}
               </button>
             </>
           )}
@@ -214,7 +214,7 @@ const Header: React.FC = () => {
                   onClick={() => navigate("/admin")}
                   className="bg-[#3BC8E7] px-4 py-2 rounded-xl font-semibold hover:bg-[#36B0D9]"
                 >
-                  Trang Admin
+                  {t('common.adminPage')}
                 </button>
               )}
             </>

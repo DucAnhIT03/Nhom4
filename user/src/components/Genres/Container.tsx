@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getGenres, type Genre } from '../../services/genre.service';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Container = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [genres, setGenres] = useState<Genre[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +55,7 @@ const Container = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <span className="text-white">Đang tải...</span>
+        <span className="text-white">{t('common.loading')}</span>
       </div>
     );
   }
@@ -67,8 +69,8 @@ const Container = () => {
   return (
     <div>
       <div className="flex justify-between mt-[-463px]">
-        <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold ">Top Genres</span>
-        <span className="mr-[165px] text-white text-[15px]">View more</span>
+        <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold ">{t('genres.topGenres')}</span>
+        <span className="mr-[165px] text-white text-[15px]">{t('genres.viewMore')}</span>
       </div>
 
       {/* Hàng 1 */}

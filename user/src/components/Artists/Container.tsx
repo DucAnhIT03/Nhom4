@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { FaChevronRight } from "react-icons/fa";
 import { FaChevronLeft } from "react-icons/fa";
 import { getArtists, type Artist } from "../../services/artist.service";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const Container = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,7 +70,7 @@ const Container = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[400px]">
-        <span className="text-white text-lg">Đang tải...</span>
+        <span className="text-white text-lg">{t('common.loading')}</span>
       </div>
     );
   }
@@ -78,7 +80,7 @@ const Container = () => {
       {/* Recently Played Section */}
       <div className="flex justify-between mt-[-463px]">
         <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">
-          Recently Played
+          {t('artists.recentlyPlayed')}
         </span>
       </div>
 
@@ -90,7 +92,7 @@ const Container = () => {
         {recentlyPlayed.length > 0 ? (
           recentlyPlayed.map((artist) => renderArtistCard(artist))
         ) : (
-          <div className="text-gray-400 text-sm">Chưa có nghệ sĩ nào</div>
+          <div className="text-gray-400 text-sm">{t('artists.noArtists')}</div>
         )}
 
         <button className="text-white hover:text-[#3BC8E7] transition">
@@ -101,7 +103,7 @@ const Container = () => {
       {/* Featured Artists Section */}
       <div className="flex justify-between mt-[64px]">
         <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">
-          Featured Artists
+          {t('artists.featuredArtists')}
         </span>
       </div>
 
@@ -113,7 +115,7 @@ const Container = () => {
         ))
       ) : (
         <div className="text-center text-gray-400 py-20 mt-[32px]">
-          <p className="text-lg">Chưa có nghệ sĩ nào</p>
+          <p className="text-lg">{t('artists.noArtists')}</p>
         </div>
       )}
     </div>

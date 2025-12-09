@@ -3,8 +3,8 @@ import { getMostPlayedSongs, addHistory, type MostPlayedItem, getFavoriteGenresP
 import { getCurrentUser } from "../../services/auth.service";
 import { getAlbumById } from "../../services/album.service";
 import { incrementSongViews, getWeeklyTopTracks, getTopTracksOfAllTime, type TrendingSong } from "../../services/song.service";
-import MusicPlayerBar from "../HomePage/MusicPlayerBar";
 import { useMusic } from "../../contexts/MusicContext";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { FaArrowLeft, FaComment } from "react-icons/fa";
 import CommentModal from "../Comments/CommentModal";
 import { Gem } from "lucide-react";
@@ -41,6 +41,7 @@ const Container = () => {
     audioUrl: string;
   } | null>(null);
   const { setQueue, setCurrentlyPlayingSong: setContextSong, setCurrentIndex } = useMusic();
+  const { t } = useLanguage();
   const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
     isOpen: false,
     songId: 0,
@@ -291,7 +292,7 @@ const Container = () => {
       <>
         {items.length === 0 ? (
           <div className="text-center text-gray-400 py-20 mt-[50px]">
-            <p className="text-lg mb-2">Chưa có bài hát nào</p>
+            <p className="text-lg mb-2">{t('common.noSongs')}</p>
           </div>
         ) : (
           <>
@@ -358,7 +359,7 @@ const Container = () => {
   if (loading) {
     return (
       <div className="mt-[43px] flex justify-center items-center h-[400px]">
-        <span className="text-white text-lg">Đang tải...</span>
+        <span className="text-white text-lg">{t('common.loading')}</span>
       </div>
     );
   }
@@ -370,7 +371,7 @@ const Container = () => {
         <div className="mt-[43px]">
           <div className="flex justify-between mt-[-511px]">
             <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">
-              Playlist
+              {t('playlist.title')}
             </span>
           </div>
 
@@ -381,10 +382,10 @@ const Container = () => {
               onClick={() => setSelectedTheme('my-favorites')}
             >
               <h3 className="text-[#3BC8E7] text-xl font-semibold mb-2">
-                Bài hát bạn hay nghe
+                {t('playlist.myFavorites')}
               </h3>
               <p className="text-gray-400 text-sm">
-                {myFavoritesItems.length} bài hát • Những bài hát bạn nghe nhiều nhất
+                {myFavoritesItems.length} {t('common.playlist')} • {t('playlist.songsYouListenMost')}
               </p>
             </div>
 
@@ -394,10 +395,10 @@ const Container = () => {
               onClick={() => setSelectedTheme('trending')}
             >
               <h3 className="text-[#3BC8E7] text-xl font-semibold mb-2">
-                Đang thịnh hành
+                {t('playlist.trending')}
               </h3>
               <p className="text-gray-400 text-sm">
-                {trendingItems.length} bài hát • Những bài hát được mọi người nghe nhiều nhất trong tuần
+                {trendingItems.length} {t('common.playlist')} • {t('playlist.songsEveryoneListens')}
               </p>
             </div>
 
@@ -407,10 +408,10 @@ const Container = () => {
               onClick={() => setSelectedTheme('favorite-genres')}
             >
               <h3 className="text-[#3BC8E7] text-xl font-semibold mb-2">
-                Thể loại yêu thích của bạn
+                {t('playlist.favoriteGenres')}
               </h3>
               <p className="text-gray-400 text-sm">
-                {favoriteGenresItems.length} bài hát • Những bài hát phổ biến của thể loại bạn hay nghe
+                {favoriteGenresItems.length} {t('common.playlist')} • {t('playlist.popularSongsOfGenres')}
               </p>
             </div>
 
@@ -428,8 +429,6 @@ const Container = () => {
             </div>
           </div>
         </div>
-        
-        <MusicPlayerBar song={currentlyPlayingSong} />
       </>
     );
   }
@@ -438,15 +437,15 @@ const Container = () => {
   const getThemeTitle = () => {
     switch (selectedTheme) {
       case 'my-favorites':
-        return 'Bài hát bạn hay nghe';
+        return t('playlist.myFavorites');
       case 'trending':
-        return 'Đang thịnh hành';
+        return t('playlist.trending');
       case 'favorite-genres':
-        return 'Thể loại yêu thích của bạn';
+        return t('playlist.favoriteGenres');
       case 'all-time':
-        return 'Top Tracks Of All Time';
+        return t('playlist.allTime');
       default:
-        return 'Playlist';
+        return t('playlist.title');
     }
   };
 
@@ -485,9 +484,7 @@ const Container = () => {
         {renderSongs(getCurrentItems())}
       </div>
       
-              <MusicPlayerBar song={currentlyPlayingSong} />
-
-              {/* Comment Modal */}
+      {/* Comment Modal */}
               <CommentModal
                 isOpen={commentModal.isOpen}
                 onClose={() => setCommentModal({ isOpen: false, songId: 0, songTitle: '' })}

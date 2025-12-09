@@ -7,7 +7,7 @@ import { getAlbumById } from "../../services/album.service";
 import { addHistory } from "../../services/history.service";
 import { getCurrentUser } from "../../services/auth.service";
 import { useMusic } from "../../contexts/MusicContext";
-import MusicPlayerBar from "../HomePage/MusicPlayerBar";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { FaComment } from "react-icons/fa";
 import CommentModal from "../Comments/CommentModal";
 
@@ -30,6 +30,7 @@ const Container = () => {
     audioUrl: string;
   } | null>(null);
   const { setQueue, setCurrentlyPlayingSong: setContextSong, setCurrentIndex: setContextIndex } = useMusic();
+  const { t } = useLanguage();
   const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
     isOpen: false,
     songId: 0,
@@ -166,7 +167,7 @@ const Container = () => {
 
   const handleSongClick = async (song: TrendingSongWithAlbum, sourceList: TrendingSongWithAlbum[]) => {
     if (!song.song.fileUrl) {
-      alert("Bài hát này không có file audio");
+      alert(t('alerts.noAudioFile'));
       return;
     }
 
@@ -184,13 +185,13 @@ const Container = () => {
         );
         
         if (!checkResult.canPlay) {
-          alert(checkResult.reason || 'Bài hát này yêu cầu tài khoản Premium.');
+          alert(checkResult.reason || t('alerts.premiumRequired'));
           return;
         }
       }
     }
 
-    const artistName = song.song.artist?.artistName || "Unknown Artist";
+    const artistName = song.song.artist?.artistName || t('common.unknownArtist');
     const songData = {
       title: song.song.title,
       artist: artistName,
@@ -252,7 +253,7 @@ const Container = () => {
   if (loading) {
     return (
       <div className="mt-[43px] flex justify-center items-center h-[400px]">
-        <span className="text-white text-lg">Đang tải...</span>
+        <span className="text-white text-lg">{t('common.loading')}</span>
       </div>
     );
   }
@@ -262,9 +263,9 @@ const Container = () => {
       <div className="mt-[43px]">
         <div className="flex justify-between mt-[-511px]">
           <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold ">
-            Top Tracks Of All Time
+            {t('topTracks.allTime')}
           </span>
-          <span className="mr-[165px] text-white text-[15px]">View more</span>
+          <span className="mr-[165px] text-white text-[15px]">{t('common.viewMore')}</span>
         </div>
 
         <div className="flex gap-[30px] mt-[32px] ml-[120px] items-center">
@@ -278,11 +279,11 @@ const Container = () => {
 
           {visibleSongs.length === 0 ? (
             <div className="text-center text-gray-400 py-20 w-full">
-              <p className="text-lg mb-2">Chưa có bài hát nào</p>
+              <p className="text-lg mb-2">{t('common.noSongs')}</p>
             </div>
           ) : (
             visibleSongs.map((song) => {
-              const artistName = song.song.artist?.artistName || "Unknown Artist";
+              const artistName = song.song.artist?.artistName || t('common.unknownArtist');
               const isPlaying = currentlyPlayingSong?.title === song.song.title;
               return (
                 <div 
@@ -308,7 +309,7 @@ const Container = () => {
                       });
                     }}
                     className="absolute top-2 right-2 bg-[#3BC8E7] text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Xem bình luận"
+                    title={t('common.comment')}
                   >
                     <FaComment size={14} />
                   </button>
@@ -325,7 +326,7 @@ const Container = () => {
                   <h3 className="text-[#DEDEDE] h-[24px]">{artistName}</h3>
                   {song.playCount && (
                     <p className="text-[#3BC8E7] text-xs mt-1">
-                      {song.playCount} lần nghe
+                      {song.playCount} {t('duration.timesPlayed')}
                     </p>
                   )}
                 </div>
@@ -345,20 +346,20 @@ const Container = () => {
         <div>
           <div>
             <h3 className=" text-[#3BC8E7] w-[133px] h-[26px] ml-[160px] mt-[64px]">
-              Weekly Top 15
+              {t('topTracks.weeklyTop15')}
             </h3>
           </div>
 
           {weeklyTop15.length === 0 ? (
             <div className="text-center text-gray-400 py-20 mt-[24px]">
-              <p className="text-lg mb-2">Chưa có bài hát nào</p>
+              <p className="text-lg mb-2">{t('common.noSongs')}</p>
             </div>
           ) : (
             <div className="flex">
               {/* Cột 1: Bài 1-5 */}
               <div className="ml-[160px] mt-[24px]">
                 {weeklyTop15.slice(0, 5).map((song, index) => {
-                  const artistName = song.song.artist?.artistName || "Unknown Artist";
+                  const artistName = song.song.artist?.artistName || t('common.unknownArtist');
                   const duration = song.song.duration ? parseFloat(song.song.duration) : undefined;
                   const isPlaying = currentlyPlayingSong?.title === song.song.title;
                   
@@ -402,7 +403,7 @@ const Container = () => {
               {/* Cột 2: Bài 6-10 */}
               <div className="ml-[40px] mt-[24px]">
                 {weeklyTop15.slice(5, 10).map((song, index) => {
-                  const artistName = song.song.artist?.artistName || "Unknown Artist";
+                  const artistName = song.song.artist?.artistName || t('common.unknownArtist');
                   const duration = song.song.duration ? parseFloat(song.song.duration) : undefined;
                   const isPlaying = currentlyPlayingSong?.title === song.song.title;
                   
@@ -446,7 +447,7 @@ const Container = () => {
               {/* Cột 3: Bài 11-15 */}
               <div className="ml-[40px] mt-[24px]">
                 {weeklyTop15.slice(10, 15).map((song, index) => {
-                  const artistName = song.song.artist?.artistName || "Unknown Artist";
+                  const artistName = song.song.artist?.artistName || t('common.unknownArtist');
                   const duration = song.song.duration ? parseFloat(song.song.duration) : undefined;
                   const isPlaying = currentlyPlayingSong?.title === song.song.title;
                   
@@ -493,9 +494,9 @@ const Container = () => {
         <div className="mt-[64px]">
           <div className="flex justify-between">
             <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold ">
-              Trending Tracks
+              {t('topTracks.trendingTracks')}
             </span>
-            <span className="mr-[165px] text-white text-[15px]">View more</span>
+            <span className="mr-[165px] text-white text-[15px]">{t('common.viewMore')}</span>
           </div>
           <div className="w-[1200px] h-[83px] ">
             <div className="w-[1200px] h-[10px] ml-[160px] mt-[24px]">
@@ -534,7 +535,7 @@ const Container = () => {
               ) : (
                 <div className="flex mt-[16px]">
                   {trendingTracks.map((song, index) => {
-                    const artistName = song.song.artist?.artistName || "Unknown Artist";
+                    const artistName = song.song.artist?.artistName || t('common.unknownArtist');
                     const duration = song.song.duration ? parseFloat(song.song.duration) : undefined;
                     const isPlaying = currentlyPlayingSong?.title === song.song.title;
                     const defaultImages = ["./TrendingTrack/D1.png", "./TrendingTrack/D2.png", "./TrendingTrack/D3.png", "./TrendingTrack/D4.png"];
@@ -574,8 +575,6 @@ const Container = () => {
           </div>
         </div>
       </div>
-
-      <MusicPlayerBar song={currentlyPlayingSong} />
 
       {/* Comment Modal */}
       <CommentModal

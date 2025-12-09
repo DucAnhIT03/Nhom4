@@ -3,6 +3,7 @@ import { IoClose } from 'react-icons/io5';
 import { FaPaperPlane, FaTrash, FaEdit } from 'react-icons/fa';
 import { getCommentsBySong, createComment, deleteComment, updateComment, type Comment } from '../../services/comment.service';
 import { getCurrentUser } from '../../services/auth.service';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface CommentModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface CommentModalProps {
 }
 
 const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps) => {
+  const { t } = useLanguage();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -62,7 +64,7 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !userId) {
-      alert('Vui lòng đăng nhập và nhập nội dung bình luận');
+      alert(t('comments.pleaseLoginAndEnter'));
       return;
     }
 
@@ -77,12 +79,12 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
       setTotal(total + 1);
     } catch (error) {
       console.error('Error creating comment:', error);
-      alert('Không thể thêm bình luận. Vui lòng thử lại.');
+      alert(t('comments.cannotAdd'));
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+    if (!confirm(t('comments.confirmDelete'))) {
       return;
     }
 
@@ -92,7 +94,7 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
       setTotal(total - 1);
     } catch (error) {
       console.error('Error deleting comment:', error);
-      alert('Không thể xóa bình luận. Vui lòng thử lại.');
+      alert(t('comments.cannotDelete'));
     }
   };
 
@@ -103,7 +105,7 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
 
   const handleSaveEdit = async (id: number) => {
     if (!editContent.trim()) {
-      alert('Nội dung bình luận không được để trống');
+      alert(t('comments.contentNotEmpty'));
       return;
     }
 
@@ -114,7 +116,7 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
       setEditContent('');
     } catch (error) {
       console.error('Error updating comment:', error);
-      alert('Không thể cập nhật bình luận. Vui lòng thử lại.');
+      alert(t('comments.cannotUpdate'));
     }
   };
 
@@ -135,13 +137,13 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
     if (days > 7) {
       return date.toLocaleDateString('vi-VN');
     } else if (days > 0) {
-      return `${days} ngày trước`;
+      return `${days} ${t('comments.daysAgo')}`;
     } else if (hours > 0) {
-      return `${hours} giờ trước`;
+      return `${hours} ${t('comments.hoursAgo')}`;
     } else if (minutes > 0) {
-      return `${minutes} phút trước`;
+      return `${minutes} ${t('comments.minutesAgo')}`;
     } else {
-      return 'Vừa xong';
+      return t('comments.justNow');
     }
   };
 
@@ -149,7 +151,7 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
     if (comment.user) {
       return `${comment.user.firstName} ${comment.user.lastName}`.trim() || comment.user.email;
     }
-    return 'Người dùng';
+    return t('comments.user');
   };
 
   if (!isOpen) return null;
@@ -160,7 +162,7 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[#252B4D]">
           <div>
-            <h2 className="text-xl font-bold text-white">Bình luận</h2>
+            <h2 className="text-xl font-bold text-white">{t('comments.title')}</h2>
             <p className="text-sm text-gray-400 mt-1">{songTitle}</p>
           </div>
           <button
@@ -174,10 +176,10 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
         {/* Comments List */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {loading ? (
-            <div className="text-center text-gray-400 py-8">Đang tải...</div>
+            <div className="text-center text-gray-400 py-8">{t('common.loading')}</div>
           ) : comments.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
-              Chưa có bình luận nào. Hãy là người đầu tiên bình luận!
+              {t('comments.noComments')}
             </div>
           ) : (
             comments.map((comment) => (
@@ -204,13 +206,13 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
                             onClick={() => handleSaveEdit(comment.id)}
                             className="px-4 py-1 bg-[#3BC8E7] text-white rounded hover:bg-[#2CC8E5] transition"
                           >
-                            Lưu
+                            {t('comments.save')}
                           </button>
                           <button
                             onClick={handleCancelEdit}
                             className="px-4 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition"
                           >
-                            Hủy
+                            {t('comments.cancel')}
                           </button>
                         </div>
                       </div>
@@ -224,14 +226,14 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
                               className="text-xs text-gray-400 hover:text-[#3BC8E7] transition flex items-center gap-1"
                             >
                               <FaEdit size={10} />
-                              Sửa
+                              {t('comments.edit')}
                             </button>
                             <button
                               onClick={() => handleDelete(comment.id)}
                               className="text-xs text-gray-400 hover:text-red-400 transition flex items-center gap-1"
                             >
                               <FaTrash size={10} />
-                              Xóa
+                              {t('comments.delete')}
                             </button>
                           </div>
                         )}
@@ -252,17 +254,17 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
               disabled={page === 1}
               className="px-4 py-2 bg-[#252B4D] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2E3358] transition"
             >
-              Trước
+              {t('common.previous')}
             </button>
             <span className="text-sm text-gray-400">
-              Trang {page} / {Math.ceil(total / limit)}
+              {t('common.page')} {page} / {Math.ceil(total / limit)}
             </span>
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={page >= Math.ceil(total / limit)}
               className="px-4 py-2 bg-[#252B4D] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2E3358] transition"
             >
-              Sau
+              {t('common.next')}
             </button>
           </div>
         )}
@@ -274,7 +276,7 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
               <textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Viết bình luận..."
+                placeholder={t('comments.enterComment')}
                 className="flex-1 bg-[#14182A] text-white rounded px-4 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-[#3BC8E7]"
                 rows={3}
               />
@@ -284,14 +286,14 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
                 className="px-6 py-2 bg-[#3BC8E7] text-white rounded hover:bg-[#2CC8E5] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <FaPaperPlane />
-                Gửi
+                {t('comments.send')}
               </button>
             </div>
           </form>
         )}
         {!userId && (
           <div className="p-6 border-t border-[#252B4D] text-center text-gray-400 text-sm">
-            Vui lòng đăng nhập để bình luận
+            {t('alerts.pleaseLogin')}
           </div>
         )}
       </div>

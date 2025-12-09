@@ -12,6 +12,7 @@ import {
   IoCloseSharp,
 } from "react-icons/io5";
 import { useMusic, type Song } from "../../contexts/MusicContext";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface MusicPlayerBarProps {
   song: Song | null;
@@ -39,6 +40,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
     registerAudio,
     unregisterAudio,
   } = useMusic();
+  const { t } = useLanguage();
 
   // Ưu tiên sử dụng song từ context, nếu không có thì dùng từ props
   const song = contextSong || songProp;
@@ -61,6 +63,17 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
       };
     }
   }, [registerAudio, unregisterAudio]);
+
+  // Cập nhật volume riêng biệt để không reload audio
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && audio.src) {
+      audio.muted = isMuted;
+      if (!isMuted) {
+        audio.volume = volume;
+      }
+    }
+  }, [volume, isMuted]);
 
   // Load bài mới + auto play
   useEffect(() => {
@@ -101,10 +114,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
       
       // So sánh URL đơn giản - chỉ reload nếu URL thay đổi
       if (currentSrc && currentSrc === newSrc) {
-        // Nếu đang phát cùng bài, chỉ cập nhật volume nếu cần
-        if (audio.volume !== volume) {
-          audio.volume = volume;
-        }
+        // Nếu đang phát cùng bài, không làm gì cả (volume đã được xử lý ở useEffect riêng)
         return;
       }
 
@@ -154,6 +164,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
       audio.addEventListener("pause", handlePause);
       audio.addEventListener("ended", handleEnded);
 
+      audio.muted = isMuted;
       audio.volume = volume;
       audio.play().catch((error) => {
         console.error("Lỗi phát nhạc:", error);
@@ -190,7 +201,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
         audio.src = '';
       }
     };
-  }, [song, volume, repeatMode, playNext, stopAllAudio]);
+  }, [song, repeatMode, playNext, stopAllAudio]);
 
   const handlePlayPause = async () => {
     const audio = audioRef.current;
@@ -259,7 +270,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
         <button
           onClick={handleClose}
           className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-          title="Đóng"
+          title={t('musicPlayer.close')}
         >
           <IoCloseSharp size={20} />
         </button>
@@ -269,7 +280,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
           <img src={song.image} className="w-[64px] h-[64px] rounded-md mr-4" />
           <div>
             <h4 className="font-bold">{song.title}</h4>
-            <p className="text-[#DEDEDE] text-sm">{String(song.artist || 'Unknown')}</p>
+            <p className="text-[#DEDEDE] text-sm">{String(song.artist || t('common.unknownArtist'))}</p>
           </div>
         </div>
 
@@ -279,7 +290,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
             <button
               onClick={() => setIsShuffle(!isShuffle)}
               className={`transition-colors ${isShuffle ? 'text-[#3BC8E7]' : 'text-gray-300 hover:text-white'}`}
-              title="Shuffle"
+              title={t('musicPlayer.shuffle')}
             >
               <IoShuffleOutline />
             </button>
@@ -292,7 +303,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
                 playPrevious();
               }}
               className="text-gray-300 hover:text-white transition-colors cursor-pointer"
-              title="Previous"
+              title={t('musicPlayer.previous')}
             >
               <IoPlaySkipBackSharp />
             </button>
@@ -300,7 +311,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
             <button
               onClick={handlePlayPause}
               className="bg-white text-black rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-200 transition-colors"
-              title={isPlaying ? 'Pause' : 'Play'}
+              title={isPlaying ? t('musicPlayer.pause') : t('musicPlayer.play')}
             >
               {isPlaying ? <IoPauseSharp /> : <IoPlaySharp />}
             </button>
@@ -313,7 +324,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
                 playNext();
               }}
               className="text-gray-300 hover:text-white transition-colors cursor-pointer"
-              title="Next"
+              title={t('musicPlayer.next')}
             >
               <IoPlaySkipForwardSharp />
             </button>
@@ -327,7 +338,7 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
               className={`transition-colors ${
                 repeatMode !== 'off' ? 'text-[#3BC8E7]' : 'text-gray-300 hover:text-white'
               }`}
-              title={`Repeat: ${repeatMode === 'off' ? 'Off' : repeatMode === 'all' ? 'All' : 'One'}`}
+              title={`${t('musicPlayer.repeat')}: ${repeatMode === 'off' ? t('musicPlayer.repeatOff') : repeatMode === 'all' ? t('musicPlayer.repeatAll') : t('musicPlayer.repeatOne')}`}
             >
               {repeatMode === 'one' ? <IoRepeat /> : <IoRepeatOutline />}
             </button>

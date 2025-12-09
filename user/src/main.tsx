@@ -3,6 +3,8 @@ import { StrictMode, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import { MusicProvider } from "./contexts/MusicContext";
+import { LanguageProvider } from "./contexts/LanguageContext";
+import Layout from "./shared/components/Layout";
 import "./index.css";
 
 // --- LAZY IMPORT PAGES ---
@@ -39,103 +41,110 @@ const PaymentCallback = lazy(() => import("./pages/PaymentCallback.tsx"));
 
 // --- ROUTER CONFIGURATION ---
 const router = createBrowserRouter([
-  // === USER ROUTES ===
   {
-    path: "/",
-    element: <HomePage />,
-  },
-  {
-    path: "artists",
-    element: <Artists />,
-  },
-  {
-    path: "artist/:id",
-    element: <ArtistDetail />,
-  },
-  {
-    path: "genres",
-    element: <Genres />,
-  },
-  {
-    path: "genre/:genreName",
-    element: <GenrePage />,
-  },
-  {
-    path: "toptracks",
-    element: <TopTrack />,
-  },
-  
-  // --- Album Routes ---
-  {
-    path: "album",
-    element: <AlbumList />, 
-  },
-  {
-    path: "album/:id",      
-    element: <AlbumDetail />, 
-  },
+    element: <Layout />,
+    children: [
+      // === USER ROUTES ===
+      {
+        path: "/",
+        element: <HomePage />,
+      },
+      {
+        path: "artists",
+        element: <Artists />,
+      },
+      {
+        path: "artist/:id",
+        element: <ArtistDetail />,
+      },
+      {
+        path: "genres",
+        element: <Genres />,
+      },
+      {
+        path: "genre/:genreName",
+        element: <GenrePage />,
+      },
+      {
+        path: "toptracks",
+        element: <TopTrack />,
+      },
+      
+      // --- Album Routes ---
+      {
+        path: "album",
+        element: <AlbumList />, 
+      },
+      {
+        path: "album/:id",      
+        element: <AlbumDetail />, 
+      },
 
-  // --- Personal Routes ---
-  {
-    path: "dowload", // Giữ nguyên typo theo yêu cầu
-    element: <Downloads />,
-  },
-  {
-    path: "favorite",
-    element: <Favourites />,
-  },
-  {
-    path: "history",
-    element: <History />,
-  },
-  {
-    path: "playlist",
-    element: <Playlist />,
-  },
+      // --- Personal Routes ---
+      {
+        path: "dowload", // Giữ nguyên typo theo yêu cầu
+        element: <Downloads />,
+      },
+      {
+        path: "favorite",
+        element: <Favourites />,
+      },
+      {
+        path: "history",
+        element: <History />,
+      },
+      {
+        path: "playlist",
+        element: <Playlist />,
+      },
 
-  // === ARTIST ROUTES (MỚI THÊM) ===
-  {
-    // Đường dẫn này khớp với code: window.location.href = "/artist/dashboard"
-    path: "artist/dashboard", 
-    element: <ArtistDashboard />,
-  },
+      // === ARTIST ROUTES (MỚI THÊM) ===
+      {
+        // Đường dẫn này khớp với code: window.location.href = "/artist/dashboard"
+        path: "artist/dashboard", 
+        element: <ArtistDashboard />,
+      },
 
-  // === SUBSCRIPTION & PAYMENT ROUTES ===
-  {
-    path: "upgrade",
-    element: <Upgrade />,
-  },
-  {
-    path: "payment",
-    element: <Payment />,
-  },
-  {
-    path: "payment/callback",
-    element: <PaymentCallback />,
-  },
+      // === SUBSCRIPTION & PAYMENT ROUTES ===
+      {
+        path: "upgrade",
+        element: <Upgrade />,
+      },
+      {
+        path: "payment",
+        element: <Payment />,
+      },
+      {
+        path: "payment/callback",
+        element: <PaymentCallback />,
+      },
 
-  // === REDIRECT ROUTES (Xử lý các route không tồn tại) ===
-  {
-    path: "dashboard/genres",
-    element: <Navigate to="/genres" replace />,
-  },
-  {
-    path: "*",
-    element: <Navigate to="/" replace />,
+      // === REDIRECT ROUTES (Xử lý các route không tồn tại) ===
+      {
+        path: "dashboard/genres",
+        element: <Navigate to="/genres" replace />,
+      },
+      {
+        path: "*",
+        element: <Navigate to="/" replace />,
+      },
+    ],
   },
 ]);
 
 // --- RENDER APP ---
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <MusicProvider>
-      <Suspense fallback={
-        <div className="flex h-screen w-full items-center justify-center bg-[#171C36] text-white font-semibold text-lg">
-          Loading...
-        </div>
-      }>
-        <RouterProvider router={router} />
-      </Suspense>
-    </MusicProvider>
+    <LanguageProvider>
+      <MusicProvider>
+        <Suspense fallback={
+          <div className="flex h-screen w-full items-center justify-center bg-[#171C36] text-white font-semibold text-lg">
+            Loading...
+          </div>
+        }>
+          <RouterProvider router={router} />
+        </Suspense>
+      </MusicProvider>
+    </LanguageProvider>
   </StrictMode>
 );

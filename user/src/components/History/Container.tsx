@@ -3,8 +3,8 @@ import { getHistory, addHistory, type HistoryItem } from "../../services/history
 import { getCurrentUser } from "../../services/auth.service";
 import { getAlbumById } from "../../services/album.service";
 import { incrementSongViews } from "../../services/song.service";
-import MusicPlayerBar from "../HomePage/MusicPlayerBar";
 import { useMusic } from "../../contexts/MusicContext";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { FaComment } from "react-icons/fa";
 import CommentModal from "../Comments/CommentModal";
 import { Gem } from "lucide-react";
@@ -25,6 +25,7 @@ const Container = () => {
     audioUrl: string;
   } | null>(null);
   const { setQueue, setCurrentlyPlayingSong: setContextSong, setCurrentIndex } = useMusic();
+  const { t } = useLanguage();
   const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
     isOpen: false,
     songId: 0,
@@ -110,10 +111,10 @@ const Container = () => {
       return;
     }
 
-    if (window.confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử nghe?")) {
+    if (window.confirm(t('history.clearConfirm'))) {
       // TODO: Thêm API để xóa history nếu cần
       setHistoryItems([]);
-      alert("Đã xóa lịch sử nghe");
+      alert(t('history.cleared'));
     }
   };
 
@@ -195,7 +196,7 @@ const Container = () => {
   if (loading) {
     return (
       <div className="mt-[43px] flex justify-center items-center h-[400px]">
-        <span className="text-white text-lg">Đang tải...</span>
+        <span className="text-white text-lg">{t('common.loading')}</span>
       </div>
     );
   }
@@ -205,7 +206,7 @@ const Container = () => {
       <div className="mt-[43px]">
         <div className="flex justify-between mt-[-511px]">
         <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">
-          History
+          {t('history.title')}
         </span>
         <button
           onClick={handleClear}
@@ -223,21 +224,21 @@ const Container = () => {
             duration-300
           "
         >
-          Clear
+          {t('history.clear')}
         </button>
       </div>
 
       {historyItems.length === 0 ? (
         <div className="text-center text-gray-400 py-20 mt-[50px]">
-          <p className="text-lg mb-2">Chưa có lịch sử nghe nào</p>
-          <p className="text-sm">Hãy nghe nhạc để xem lịch sử ở đây</p>
+          <p className="text-lg mb-2">{t('history.noHistory')}</p>
+          <p className="text-sm">{t('history.listenToSeeHistory')}</p>
         </div>
       ) : (
         <>
           {/* Hàng 1: 6 bài đầu */}
           <div className="flex gap-[30px] mt-[32px] ml-[120px]">
             {firstRow.map((item) => {
-              const artistName = item.song.artist?.artistName || "Unknown Artist";
+              const artistName = item.song.artist?.artistName || t('common.unknownArtist');
               const isPlaying = currentlyPlayingSong?.title === item.song.title;
               return (
                 <div 
@@ -263,7 +264,7 @@ const Container = () => {
                       });
                     }}
                     className="absolute top-2 right-2 bg-[#3BC8E7] text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Xem bình luận"
+                    title={t('common.comment')}
                   >
                     <FaComment size={14} />
                   </button>
@@ -287,7 +288,7 @@ const Container = () => {
           {secondRow.length > 0 && (
             <div className="flex gap-[30px] mt-[32px] ml-[120px]">
               {secondRow.map((item) => {
-                const artistName = item.song.artist?.artistName || "Unknown Artist";
+                const artistName = item.song.artist?.artistName || t('common.unknownArtist');
                 const isPlaying = currentlyPlayingSong?.title === item.song.title;
                 return (
                   <div 
@@ -313,7 +314,7 @@ const Container = () => {
                         });
                       }}
                       className="absolute top-2 right-2 bg-[#3BC8E7] text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Xem bình luận"
+                      title={t('common.comment')}
                     >
                       <FaComment size={14} />
                     </button>
@@ -336,9 +337,6 @@ const Container = () => {
         </>
       )}
       </div>
-      
-      {/* Music Player Bar */}
-      <MusicPlayerBar song={currentlyPlayingSong} />
 
       {/* Comment Modal */}
       <CommentModal

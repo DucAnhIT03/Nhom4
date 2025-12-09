@@ -14,12 +14,14 @@ import {
   FaFolderOpen, // Icon cho "Đăng tải của tôi"
   FaMusic, // Icon cho Playlist
 } from "react-icons/fa";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [userRole, setUserRole] = useState("user"); // State lưu role
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -83,18 +85,18 @@ const Sidebar = () => {
   }, [loadRoleFromAPI]); // Thêm loadRoleFromAPI vào dependency array
 
   const menuItems = [
-    { icon: <FaHome />, label: "Discover", path: "/" },
-    { icon: <FaCopy />, label: "Albums", path: "/album" },
-    { icon: <FaMicrophone />, label: "Artists", path: "/artists" },
-    { icon: <FaBriefcase />, label: "Genres", path: "/genres" },
-    { icon: <FaGem />, label: "Top Tracks", path: "/toptracks" },
+    { icon: <FaHome />, label: t('sidebar.discover'), path: "/" },
+    { icon: <FaCopy />, label: t('sidebar.albums'), path: "/album" },
+    { icon: <FaMicrophone />, label: t('sidebar.artists'), path: "/artists" },
+    { icon: <FaBriefcase />, label: t('sidebar.genres'), path: "/genres" },
+    { icon: <FaGem />, label: t('sidebar.topTracks'), path: "/toptracks" },
   ];
 
   const bottomItems = [
-    { icon: <FaDownload />, label: "Downloads", path: "/dowload" },
-    { icon: <FaHeart />, label: "Favourites", path: "/favorite" },
-    { icon: <FaClock />, label: "History", path: "/history" },
-    { icon: <FaMusic />, label: "Playlist", path: "/playlist" },
+    { icon: <FaDownload />, label: t('sidebar.downloads'), path: "/dowload" },
+    { icon: <FaHeart />, label: t('sidebar.favourites'), path: "/favorite" },
+    { icon: <FaClock />, label: t('sidebar.history'), path: "/history" },
+    { icon: <FaMusic />, label: t('sidebar.playlist'), path: "/playlist" },
   ];
 
   // 3. Tạo danh sách items cuối cùng dựa trên role
@@ -107,7 +109,7 @@ const Sidebar = () => {
   if (normalizedRole === "artist") {
     finalMenuItems.push({
       icon: <FaFolderOpen className="text-cyan-400" />, // Icon cho "Đăng tải của tôi"
-      label: "Đăng tải của tôi",
+      label: t('sidebar.myUploads'),
       path: "/artist/dashboard?tab=my-content", // Link trực tiếp đến tab "Đăng tải của tôi"
     });
   }

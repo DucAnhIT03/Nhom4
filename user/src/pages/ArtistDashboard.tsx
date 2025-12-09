@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import MyAlbumsTab from "../components/ArtistMyContent/MyAlbumsTab";
 import CommentManagementTab from "../components/ArtistMyContent/CommentManagementTab";
-import MusicPlayerBar from "../components/HomePage/MusicPlayerBar";
 import { useMusic } from "../contexts/MusicContext";
 import { 
   getMyAlbums, 
@@ -1358,7 +1357,6 @@ const ArtistDashboard = () => {
       </aside>
       <main className="flex-1 p-8 overflow-y-auto relative"><div className="md:hidden flex justify-between items-center mb-8"><h1 className="text-xl font-bold">ARTIST HUB</h1><button className="p-2 bg-[#1B2039] rounded"><User/></button></div>{renderContent()}</main>
       {renderEditModal()}
-      <MusicPlayerBar song={null} />
     </div>
   );
 };
