@@ -24,18 +24,21 @@ const Container = () => {
 
   // Hàm map dữ liệu từ API sang format form tĩnh
   const mapAlbumToCard = (album: Album): AlbumCard => {
+    // Đảm bảo title luôn có giá trị
+    const albumTitle = album.title || "Unknown Album";
+    
     // Đảm bảo author luôn là string
     let authorName = "Unknown";
     if (album.artist) {
       if (typeof album.artist === 'string') {
         authorName = album.artist;
-      } else if (album.artist.artistName) {
+      } else if (album.artist?.artistName) {
         authorName = album.artist.artistName;
       }
     } else if (album.genre) {
       if (typeof album.genre === 'string') {
         authorName = album.genre;
-      } else if (album.genre.genreName) {
+      } else if (album.genre?.genreName) {
         authorName = album.genre.genreName;
       }
     }
@@ -43,7 +46,7 @@ const Container = () => {
     return {
       id: album.id,
       img: album.coverImage || "https://via.placeholder.com/175x175?text=No+Image",
-      title: album.title,
+      title: albumTitle,
       author: authorName,
       duration: undefined, // API không có duration ở album level
     };

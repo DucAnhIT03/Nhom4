@@ -9,6 +9,7 @@ import GenreManagementPage from '../features/genres/pages/GenreManagementPage';
 import AlbumManagementPage from '../features/albums/pages/AlbumManagementPage';
 import BannerManagementPage from '../features/banners/pages/BannerManagementPage';
 import SubscriptionPlanManagementPage from '../features/subscription-plans/pages/SubscriptionPlanManagementPage';
+import MailManagementPage from '../features/mail/pages/MailManagementPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -67,6 +68,10 @@ const router = createBrowserRouter([
       {
         path: 'subscription-plans',
         element: <SubscriptionPlanManagementPage />,
+      },
+      {
+        path: 'mail',
+        element: <MailManagementPage />,
       },
     ],
   },

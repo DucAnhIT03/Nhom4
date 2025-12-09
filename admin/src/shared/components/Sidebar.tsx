@@ -8,6 +8,7 @@ import {
   Album,
   Image,
   CreditCard,
+  Mail,
   LogOut
 } from 'lucide-react';
 import './Sidebar.css';
@@ -22,6 +23,7 @@ const Sidebar = () => {
     { icon: Tag, label: 'Quản lý thể loại', path: '/dashboard/genres', hasArrow: true },
     { icon: Image, label: 'Quản lý banner', path: '/dashboard/banners', hasArrow: true },
     { icon: CreditCard, label: 'Quản lý giá Premium', path: '/dashboard/subscription-plans', hasArrow: true },
+    { icon: Mail, label: 'Quản lý Mail', path: '/dashboard/mail', hasArrow: true },
   ];
 
   const handleLogout = () => {

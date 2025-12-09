@@ -28,7 +28,8 @@ export class CommentService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
 
-    const where: any = { songId: query.songId };
+    // Chỉ lấy comments gốc (không phải reply)
+    const where: any = { songId: query.songId, parentId: null };
     if (query.search) {
       where.content = ILike(`%${query.search}%`);
     }
@@ -40,10 +41,34 @@ export class CommentService {
       take: limit,
     });
 
-    // Load user info cho mỗi comment
+    // Load user info và replies cho mỗi comment
     const commentsWithUser = await Promise.all(
       data.map(async (comment) => {
         const user = await this.userRepository.findOne({ where: { id: comment.userId } });
+        
+        // Load replies của comment này
+        const replies = await this.commentRepository.find({
+          where: { parentId: comment.id },
+          order: { createdAt: "ASC" },
+        });
+
+        // Load user info cho mỗi reply
+        const repliesWithUser = await Promise.all(
+          replies.map(async (reply) => {
+            const replyUser = await this.userRepository.findOne({ where: { id: reply.userId } });
+            return {
+              ...reply,
+              user: replyUser ? {
+                id: replyUser.id,
+                firstName: replyUser.firstName,
+                lastName: replyUser.lastName,
+                email: replyUser.email,
+                profileImage: replyUser.profileImage,
+              } : undefined,
+            };
+          })
+        );
+
         return {
           ...comment,
           user: user ? {
@@ -51,7 +76,9 @@ export class CommentService {
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
+            profileImage: user.profileImage,
           } : undefined,
+          replies: repliesWithUser,
         };
       })
     );
@@ -80,6 +107,7 @@ export class CommentService {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        profileImage: user.profileImage,
       } : undefined,
     } as Comment;
   }

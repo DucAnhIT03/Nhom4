@@ -125,7 +125,13 @@
     "featuredAlbums": "Featured Albums",
     "trendingAlbums": "Trending Albums",
     "top15Albums": "Top 15 Albums",
-    "weeklyTop15": "Weekly Top 15"
+    "weeklyTop15": "Weekly Top 15",
+    "noDownloads": "No songs downloaded yet",
+    "downloadToSee": "Download songs to see them here",
+    "remove": "Remove from downloads",
+    "removeConfirm": "Are you sure you want to remove this song from downloads?",
+    "removed": "Song removed from downloads",
+    "downloaded": "Saved for offline listening"
   },
   "homepage": {
     "recentlyPlayed": "Recently Played",

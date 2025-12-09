@@ -15,18 +15,6 @@ export class SongController {
     return this.songService.findAll();
   }
 
-  @ApiOperation({ summary: "Lấy chi tiết một bài hát theo ID" })
-  @Get(":id")
-  findOne(@Param("id", ParseIntPipe) id: number) {
-    return this.songService.findOne(id);
-  }
-
-  @ApiOperation({ summary: "Tạo mới một bài hát" })
-  @Post()
-  create(@Body() dto: CreateSongDto) {
-    return this.songService.create(dto);
-  }
-
   /**
    * Danh sách các bài hát mới phát hành (mới tạo gần đây nhất).
    * Query:
@@ -37,6 +25,18 @@ export class SongController {
   getNewReleases(@Query("limit") limit?: string) {
     const parsedLimit = limit ? Number(limit) : undefined;
     return this.songService.getNewReleases(parsedLimit);
+  }
+
+  @ApiOperation({ summary: "Lấy chi tiết một bài hát theo ID" })
+  @Get(":id")
+  findOne(@Param("id", ParseIntPipe) id: number) {
+    return this.songService.findOne(id);
+  }
+
+  @ApiOperation({ summary: "Tạo mới một bài hát" })
+  @Post()
+  create(@Body() dto: CreateSongDto) {
+    return this.songService.create(dto);
   }
 
   /**

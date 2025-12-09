@@ -10,9 +10,18 @@ import {
   IoRepeatOutline,
   IoRepeat,
   IoCloseSharp,
+  IoCloudDownloadOutline,
+  IoCheckmarkDoneSharp,
 } from "react-icons/io5";
 import { useMusic, type Song } from "../../contexts/MusicContext";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { addHistory } from "../../services/history.service";
+import { incrementSongViews } from "../../services/song.service";
+import { getCurrentUser } from "../../services/auth.service";
+import { FaHeart, FaRegHeart } from "react-icons/fa";
+import { toggleWishlist, getWishlistSongIds } from "../../services/wishlist.service";
+import { addDownload, getDownloads } from "../../services/download.service";
+import { saveSongToCache, getCachedSongUrl } from "../../utils/downloadCache.ts";
 
 interface MusicPlayerBarProps {
   song: Song | null;
@@ -48,10 +57,64 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
   const isDraggingRef = useRef(false);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const historyAddedRef = useRef<Set<number>>(new Set()); // Track các bài hát đã thêm vào lịch sử trong session này
+
+  // Load userId
+  useEffect(() => {
+    const loadUserId = async () => {
+      const storedUserId = localStorage.getItem('userId');
+      if (storedUserId) {
+        setUserId(parseInt(storedUserId));
+      } else {
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const user = await getCurrentUser();
+            if (user.id) {
+              setUserId(user.id);
+              localStorage.setItem('userId', user.id.toString());
+            }
+          } catch (error) {
+            console.error('Error loading user:', error);
+          }
+        }
+      }
+    };
+    loadUserId();
+  }, []);
+
+  // Load wishlist status khi song thay đổi
+  useEffect(() => {
+    const loadWishlistStatus = async () => {
+      if (!song?.id || !userId) {
+        setIsLiked(false);
+        setIsDownloaded(false);
+        return;
+      }
+
+      try {
+        const wishlistSongIds = await getWishlistSongIds(userId);
+        setIsLiked(wishlistSongIds.includes(song.id));
+
+        const downloads = await getDownloads(userId);
+        setIsDownloaded(downloads.some(d => d.song.id === song.id));
+      } catch (error) {
+        console.error('Error loading wishlist/download status:', error);
+        setIsLiked(false);
+        setIsDownloaded(false);
+      }
+    };
+
+    loadWishlistStatus();
+  }, [song?.id, userId]);
 
   // Đăng ký audio element khi mount
   useEffect(() => {
@@ -122,8 +185,26 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
       setCurrentTime(0);
       setDuration(0);
       setIsPlaying(false);
+      
+      // Reset history tracking khi chuyển sang bài mới
+      historyAddedRef.current.clear();
 
-      audio.src = song.audioUrl;
+      // Ưu tiên dùng file đã cache để phát offline
+      const cachedUrl = song.id ? await getCachedSongUrl(song.id) : null;
+      const newSource = cachedUrl || song.audioUrl;
+
+      if (!newSource) {
+        alert(t('alerts.unknownError') || 'Không tìm thấy file audio.');
+        return;
+      }
+
+      if (!cachedUrl && !navigator.onLine) {
+        alert(t('alerts.offlinePlaybackNotAvailable') || 'Không có kết nối Internet và chưa tải sẵn bài hát.');
+        playNext();
+        return;
+      }
+
+      audio.src = newSource;
       audio.load();
 
       // Cần chờ metadata để lấy duration
@@ -139,7 +220,52 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
       };
 
       // Handle play/pause state
-      const handlePlay = () => setIsPlaying(true);
+      const handlePlay = async () => {
+        setIsPlaying(true);
+        
+        // Tự động thêm vào lịch sử và tăng lượt nghe khi bài hát bắt đầu phát (chỉ một lần)
+        if (song.id && !historyAddedRef.current.has(song.id)) {
+          historyAddedRef.current.add(song.id);
+          
+          try {
+            // Lấy userId
+            const storedUserId = localStorage.getItem('userId');
+            let userId: number | null = null;
+            
+            if (storedUserId) {
+              userId = parseInt(storedUserId);
+            } else {
+              const token = localStorage.getItem('token');
+              if (token) {
+                try {
+                  const user = await getCurrentUser();
+                  if (user.id) {
+                    userId = user.id;
+                    localStorage.setItem('userId', user.id.toString());
+                  }
+                } catch (error) {
+                  console.error('Error loading user:', error);
+                }
+              }
+            }
+            
+            // Tăng lượt nghe và thêm vào lịch sử
+            if (userId) {
+              await Promise.all([
+                incrementSongViews(song.id),
+                addHistory(userId, song.id)
+              ]);
+            } else {
+              // Vẫn tăng lượt nghe ngay cả khi chưa đăng nhập
+              await incrementSongViews(song.id);
+            }
+          } catch (error) {
+            console.error('Error updating history/views:', error);
+            // Nếu lỗi, xóa khỏi set để có thể thử lại
+            historyAddedRef.current.delete(song.id);
+          }
+        }
+      };
       const handlePause = () => setIsPlaying(false);
       const handleEnded = () => {
         setIsPlaying(false);
@@ -258,6 +384,59 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
     setCurrentlyPlayingSong(null);
   };
 
+  const handleDownload = async () => {
+    if (!song?.id || !song.audioUrl) {
+      alert(t('alerts.unknownError'));
+      return;
+    }
+
+    if (!userId) {
+      alert(t('alerts.pleaseLogin'));
+      return;
+    }
+
+    // Chặn tải bài Premium nếu chưa nâng cấp
+    if (song.type === 'PREMIUM') {
+      const { canPlayPremiumSong, isSongOwner } = await import('../../utils/premiumCheck');
+      const isOwner = isSongOwner(song.artistId);
+      if (!isOwner) {
+        const result = await canPlayPremiumSong({ type: song.type, artistId: song.artistId });
+        if (!result.canPlay) {
+          alert(result.reason || 'Bài hát này yêu cầu tài khoản Premium để tải.');
+          return;
+        }
+      }
+    }
+
+    try {
+      setIsDownloading(true);
+      await addDownload(userId, song.id);
+      await saveSongToCache(song.id, song.audioUrl);
+      setIsDownloaded(true);
+      alert(t('downloads.downloaded') || 'Đã lưu vào Tải xuống');
+    } catch (error) {
+      console.error('Error downloading song:', error);
+      alert('Có lỗi khi tải bài hát. Vui lòng thử lại.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleToggleLike = async () => {
+    if (!song?.id || !userId) {
+      alert(t('alerts.pleaseLogin'));
+      return;
+    }
+
+    try {
+      const response = await toggleWishlist(userId, song.id);
+      setIsLiked(response.isFavorite);
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      alert(t('alerts.unknownError'));
+    }
+  };
+
   if (!song) return null;
 
   return (
@@ -278,10 +457,43 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
         {/* Left */}
         <div className="flex items-center">
           <img src={song.image} className="w-[64px] h-[64px] rounded-md mr-4" />
-          <div>
+          <div className="flex-1">
             <h4 className="font-bold">{song.title}</h4>
             <p className="text-[#DEDEDE] text-sm">{String(song.artist || t('common.unknownArtist'))}</p>
           </div>
+          {song.id && (
+            <button
+              onClick={handleToggleLike}
+              className="ml-4 text-2xl transition-colors hover:scale-110"
+              title={isLiked ? t('wishlist.removeFromFavorites') : t('wishlist.addToFavorites')}
+            >
+              {isLiked ? (
+                <FaHeart className="text-red-500" />
+              ) : (
+                <FaRegHeart className="text-gray-400 hover:text-red-500" />
+              )}
+            </button>
+          )}
+          {song.id && (
+            <button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="ml-2 text-2xl transition-colors hover:scale-110 disabled:opacity-50"
+              title={
+                isDownloaded
+                  ? t('downloads.title')
+                  : song.type === 'PREMIUM'
+                    ? t('downloads.viewMore') || 'Yêu cầu Premium để tải'
+                    : t('downloads.title')
+              }
+            >
+              {isDownloaded ? (
+                <IoCheckmarkDoneSharp className="text-[#3BC8E7]" />
+              ) : (
+                <IoCloudDownloadOutline className="text-gray-300 hover:text-white" />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Center */}

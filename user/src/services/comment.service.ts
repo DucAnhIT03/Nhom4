@@ -15,7 +15,9 @@ export interface Comment {
     firstName: string;
     lastName: string;
     email: string;
+    profileImage?: string;
   };
+  replies?: Comment[];
 }
 
 export interface CreateCommentDto {

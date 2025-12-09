@@ -66,17 +66,47 @@ export class AlbumService {
   }
 
   async findTrending(limit = 10): Promise<Album[]> {
-    const qb = this.albumRepository
-      .createQueryBuilder("album")
-      .leftJoin("songs", "song", "song.album_id = album.id")
-      .select("album")
+    // Tính totalViews cho mỗi album
+    const viewsQuery = this.songRepository
+      .createQueryBuilder("song")
+      .select("song.albumId", "albumId")
       .addSelect("COALESCE(SUM(song.views), 0)", "totalViews")
-      .groupBy("album.id")
+      .where("song.albumId IS NOT NULL")
+      .groupBy("song.albumId")
       .orderBy("totalViews", "DESC")
       .limit(limit);
 
-    const result = await qb.getMany();
-    return result;
+    const viewsResult = await viewsQuery.getRawMany<{ albumId: number; totalViews: string }>();
+
+    if (viewsResult.length === 0) {
+      // Nếu không có bài hát nào, trả về albums mới nhất
+      return this.albumRepository.find({
+        relations: ["artist", "genre"],
+        order: { createdAt: "DESC" },
+        take: limit,
+      });
+    }
+
+    const albumIds = viewsResult.map(r => r.albumId);
+
+    // Load albums với relations
+    const albums = await this.albumRepository.find({
+      where: { id: In(albumIds) },
+      relations: ["artist", "genre"],
+    });
+
+    // Sắp xếp lại theo thứ tự totalViews
+    const albumsWithViews = albums.map(album => {
+      const viewsData = viewsResult.find(v => v.albumId === album.id);
+      return {
+        album,
+        totalViews: viewsData ? Number(viewsData.totalViews) : 0,
+      };
+    });
+
+    albumsWithViews.sort((a, b) => b.totalViews - a.totalViews);
+
+    return albumsWithViews.map(item => item.album);
   }
 
   async getSongs(albumId: number): Promise<Song[]> {
@@ -115,6 +145,17 @@ export class AlbumService {
       take: 1,
     });
     return albums.length > 0 ? albums[0] : null;
+  }
+
+  /**
+   * Lấy tất cả albums của một artist
+   */
+  async findAllByArtistId(artistId: number): Promise<Album[]> {
+    return this.albumRepository.find({
+      where: { artistId },
+      order: { createdAt: "DESC" },
+      relations: ["artist", "genre"],
+    });
   }
 
   /**

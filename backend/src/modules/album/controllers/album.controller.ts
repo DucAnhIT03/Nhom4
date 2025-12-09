@@ -24,6 +24,12 @@ export class AlbumController {
     return this.albumService.findTrending(parsedLimit);
   }
 
+  @ApiOperation({ summary: "Lấy danh sách albums theo artist ID" })
+  @Get("artist/:artistId")
+  findByArtistId(@Param("artistId", ParseIntPipe) artistId: number): Promise<AlbumResponseDto[]> {
+    return this.albumService.findAllByArtistId(artistId);
+  }
+
   @ApiOperation({ summary: "Lấy chi tiết một album theo ID" })
   @Get(":id")
   findOne(@Param("id", ParseIntPipe) id: number): Promise<AlbumResponseDto> {

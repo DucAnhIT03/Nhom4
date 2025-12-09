@@ -16,18 +16,6 @@ export class GenreController {
     return this.genreService.findAll();
   }
 
-  @ApiOperation({ summary: "Lấy chi tiết một thể loại" })
-  @Get(":id")
-  findOne(@Param("id", ParseIntPipe) id: number) {
-    return this.genreService.findOne(id);
-  }
-
-  @ApiOperation({ summary: "Tạo mới một thể loại" })
-  @Post()
-  create(@Body() dto: CreateGenreDto) {
-    return this.genreService.create(dto);
-  }
-
   /**
    * Danh sách Top Genres.
    * Dựa trên số lượng bài hát thuộc mỗi thể loại.
@@ -39,6 +27,18 @@ export class GenreController {
   getTopGenres(@Query("limit") limit?: string) {
     const parsedLimit = limit ? Number(limit) : undefined;
     return this.genreService.getTopGenres(parsedLimit);
+  }
+
+  @ApiOperation({ summary: "Lấy chi tiết một thể loại" })
+  @Get(":id")
+  findOne(@Param("id", ParseIntPipe) id: number) {
+    return this.genreService.findOne(id);
+  }
+
+  @ApiOperation({ summary: "Tạo mới một thể loại" })
+  @Post()
+  create(@Body() dto: CreateGenreDto) {
+    return this.genreService.create(dto);
   }
 
   @ApiOperation({ summary: "Cập nhật thông tin thể loại" })

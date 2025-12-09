@@ -10,7 +10,8 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       "http://localhost:5173", // User app (Vite)
-      "http://localhost:5174", // Admin app (Vite)
+      "http://localhost:5174", // Admin app (Vite) - giữ lại để tương thích
+      "http://localhost:5175", // Admin app (Vite) - port mới
       "http://localhost:3000", // Backend/Swagger
     ],
     credentials: true,

@@ -62,7 +62,7 @@ const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({
 
   return (
     <>
-      <div className="relative" ref={dropdownRef}>
+      <div className="relative z-[10000]" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="focus:outline-none flex items-center gap-2"
@@ -78,7 +78,7 @@ const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-56 bg-[#1a1a1a] rounded-lg shadow-xl border border-[#3BC8E7]/20 z-50 overflow-hidden">
+          <div className="absolute right-0 mt-2 w-56 bg-[#1a1a1a] rounded-lg shadow-xl border border-[#3BC8E7]/20 z-[10000] overflow-hidden">
             <div className="py-2">
               {userName && (
                 <div className="px-4 py-2 border-b border-[#3BC8E7]/20">

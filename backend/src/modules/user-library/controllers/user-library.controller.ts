@@ -1,8 +1,10 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserLibraryService } from "../services/user-library.service";
 import { ToggleWishlistDto } from "../dtos/request/toggle-wishlist.dto";
 import { AddHistoryDto } from "../dtos/request/add-history.dto";
+import { AddDownloadDto } from "../dtos/request/add-download.dto";
+import { RemoveDownloadDto } from "../dtos/request/remove-download.dto";
 
 @ApiTags("Thư viện người dùng")
 @Controller("library")
@@ -47,6 +49,24 @@ export class UserLibraryController {
     @Param("userId", ParseIntPipe) userId: number,
   ) {
     return this.userLibraryService.getUserFavoriteGenresPopularSongs(userId);
+  }
+
+  @ApiOperation({ summary: "Thêm bài hát vào danh sách tải xuống của user" })
+  @Post("downloads")
+  addDownload(@Body() dto: AddDownloadDto) {
+    return this.userLibraryService.addDownload(dto);
+  }
+
+  @ApiOperation({ summary: "Xóa bài hát khỏi danh sách tải xuống của user" })
+  @Delete("downloads")
+  removeDownload(@Body() dto: RemoveDownloadDto) {
+    return this.userLibraryService.removeDownload(dto);
+  }
+
+  @ApiOperation({ summary: "Lấy danh sách bài hát đã tải xuống của user" })
+  @Get("downloads/:userId")
+  getDownloads(@Param("userId", ParseIntPipe) userId: number) {
+    return this.userLibraryService.getDownloads(userId);
   }
 }
 

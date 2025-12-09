@@ -1,11 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Between, Repository } from "typeorm";
+import { In, Between, Repository, QueryFailedError } from "typeorm";
 import { Wishlist } from "../../../shared/schemas/wishlist.schema";
 import { SongHistory } from "../../../shared/schemas/song-history.schema";
 import { Song } from "../../../shared/schemas/song.schema";
+import { Download } from "../../../shared/schemas/download.schema";
 import { ToggleWishlistDto } from "../dtos/request/toggle-wishlist.dto";
 import { AddHistoryDto } from "../dtos/request/add-history.dto";
+import { AddDownloadDto } from "../dtos/request/add-download.dto";
+import { RemoveDownloadDto } from "../dtos/request/remove-download.dto";
 import { Genre } from "../../../shared/schemas/genre.schema";
 
 @Injectable()
@@ -19,6 +22,8 @@ export class UserLibraryService {
     private readonly songRepository: Repository<Song>,
     @InjectRepository(Genre)
     private readonly genreRepository: Repository<Genre>,
+    @InjectRepository(Download)
+    private readonly downloadRepository: Repository<Download>,
   ) {}
 
   async toggleWishlist(dto: ToggleWishlistDto): Promise<{ isFavorite: boolean }> {
@@ -31,12 +36,35 @@ export class UserLibraryService {
       return { isFavorite: false };
     }
 
-    const entity = this.wishlistRepository.create({
-      userId: dto.userId,
-      songId: dto.songId,
-    });
-    await this.wishlistRepository.save(entity);
-    return { isFavorite: true };
+    // Try to insert, handle race condition where another request already inserted
+    try {
+      const entity = this.wishlistRepository.create({
+        userId: dto.userId,
+        songId: dto.songId,
+      });
+      await this.wishlistRepository.save(entity);
+      return { isFavorite: true };
+    } catch (error) {
+      // Handle duplicate key error (race condition)
+      if (error instanceof QueryFailedError && error.driverError?.code === 'ER_DUP_ENTRY') {
+        // Another request already added it, re-check and remove it
+        const recheck = await this.wishlistRepository.findOne({
+          where: { userId: dto.userId, songId: dto.songId },
+        });
+        if (recheck) {
+          await this.wishlistRepository.remove(recheck);
+          return { isFavorite: false };
+        }
+        // If somehow it doesn't exist, try to add again (shouldn't happen but safe)
+        const entity = this.wishlistRepository.create({
+          userId: dto.userId,
+          songId: dto.songId,
+        });
+        await this.wishlistRepository.save(entity);
+        return { isFavorite: true };
+      }
+      throw error; // Re-throw if it's a different error
+    }
   }
 
   async getWishlist(userId: number): Promise<Array<{ song: Song; wishlist: Wishlist }>> {
@@ -61,11 +89,42 @@ export class UserLibraryService {
   }
 
   async addHistory(dto: AddHistoryDto): Promise<void> {
-    const entity = this.songHistoryRepository.create({
-      userId: dto.userId,
-      songId: dto.songId,
-    });
-    await this.songHistoryRepository.save(entity);
+    // Generate a unique timestamp with millisecond precision
+    // Add a small random offset (0-999ms) to reduce collision probability
+    const baseTime = Date.now();
+    const randomOffset = Math.floor(Math.random() * 1000); // 0-999ms
+    let playedAt = new Date(baseTime + randomOffset);
+    
+    let retryCount = 0;
+    const maxRetries = 5;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        await this.songHistoryRepository.query(
+          `INSERT INTO song_histories (user_id, song_id, played_at) VALUES (?, ?, ?)`,
+          [dto.userId, dto.songId, playedAt]
+        );
+        return; // Success, exit the function
+      } catch (error) {
+        // Handle duplicate key errors gracefully (can happen in high-concurrency scenarios)
+        if (error instanceof QueryFailedError && error.driverError?.code === 'ER_DUP_ENTRY') {
+          retryCount++;
+          if (retryCount > maxRetries) {
+            // If we've exhausted retries, use INSERT IGNORE as fallback
+            // This will silently ignore the duplicate, which is acceptable for history tracking
+            await this.songHistoryRepository.query(
+              `INSERT IGNORE INTO song_histories (user_id, song_id, played_at) VALUES (?, ?, ?)`,
+              [dto.userId, dto.songId, new Date()]
+            );
+            return;
+          }
+          // Increment timestamp by retry count milliseconds to ensure uniqueness
+          playedAt = new Date(baseTime + randomOffset + retryCount);
+        } else {
+          throw error; // Re-throw if it's a different error
+        }
+      }
+    }
   }
 
   async getHistory(userId: number): Promise<Array<{ song: Song; history: SongHistory }>> {
@@ -104,13 +163,14 @@ export class UserLibraryService {
   }
 
   async getMostPlayedSongs(userId: number, limit?: number): Promise<Array<{ song: Song; playCount: number }>> {
-    // Đếm số lần phát của mỗi bài hát
+    // Đếm số lần phát của mỗi bài hát, chỉ lấy bài có >= 4 lần nghe
     const playCounts = await this.songHistoryRepository
       .createQueryBuilder("history")
       .select("history.songId", "songId")
       .addSelect("COUNT(*)", "playCount")
       .where("history.userId = :userId", { userId })
       .groupBy("history.songId")
+      .having("COUNT(*) >= :minPlayCount", { minPlayCount: 4 })
       .orderBy("COUNT(*)", "DESC")
       .limit(limit || 100)
       .getRawMany<{ songId: number; playCount: string }>();
@@ -126,10 +186,24 @@ export class UserLibraryService {
     });
 
     // Map songs với playCount theo đúng thứ tự (nhiều nhất trước)
-    return playCounts.map(pc => ({
-      song: songs.find(s => s.id === pc.songId)!,
-      playCount: parseInt(pc.playCount, 10),
-    })).filter(item => item.song); // Lọc bỏ những bài hát không tìm thấy
+    // Đảm bảo không có trùng lặp bằng cách sử dụng Map
+    const songMap = new Map<number, Song>();
+    songs.forEach(song => {
+      if (!songMap.has(song.id)) {
+        songMap.set(song.id, song);
+      }
+    });
+
+    return playCounts
+      .map(pc => {
+        const song = songMap.get(pc.songId);
+        if (!song) return null;
+        return {
+          song,
+          playCount: parseInt(pc.playCount, 10),
+        };
+      })
+      .filter((item): item is { song: Song; playCount: number } => item !== null);
   }
 
   async getUserFavoriteGenresPopularSongs(userId: number, limit?: number): Promise<Array<{ song: Song; playCount: number }>> {
@@ -219,6 +293,69 @@ export class UserLibraryService {
         playCount: playCountMap.get(song.id) || song.views || 0,
       }))
       .sort((a, b) => b.playCount - a.playCount);
+  }
+
+  async addDownload(dto: AddDownloadDto): Promise<{ isDownloaded: boolean }> {
+    const existing = await this.downloadRepository.findOne({
+      where: { userId: dto.userId, songId: dto.songId },
+    });
+
+    if (existing) {
+      return { isDownloaded: true };
+    }
+
+    // Try to insert, handle race condition where another request already inserted
+    try {
+      const download = this.downloadRepository.create({
+        userId: dto.userId,
+        songId: dto.songId,
+      });
+      await this.downloadRepository.save(download);
+      return { isDownloaded: true };
+    } catch (error) {
+      // Handle duplicate key error (race condition)
+      if (error instanceof QueryFailedError && error.driverError?.code === 'ER_DUP_ENTRY') {
+        // Another request already added it
+        return { isDownloaded: true };
+      }
+      throw error; // Re-throw if it's a different error
+    }
+  }
+
+  async removeDownload(dto: RemoveDownloadDto): Promise<{ isDownloaded: boolean }> {
+    const existing = await this.downloadRepository.findOne({
+      where: { userId: dto.userId, songId: dto.songId },
+    });
+
+    if (existing) {
+      await this.downloadRepository.remove(existing);
+      return { isDownloaded: false };
+    }
+
+    return { isDownloaded: false };
+  }
+
+  async getDownloads(userId: number): Promise<Array<{ song: Song; download: Download }>> {
+    const downloads = await this.downloadRepository.find({
+      where: { userId },
+      order: { addedAt: "DESC" },
+    });
+
+    if (downloads.length === 0) {
+      return [];
+    }
+
+    const songIds = downloads.map(d => d.songId);
+    const songs = await this.songRepository.find({
+      where: { id: In(songIds) },
+      relations: ["artist"],
+    });
+
+    // Map songs với download theo đúng thứ tự (mới nhất trước)
+    return downloads.map(download => ({
+      song: songs.find(s => s.id === download.songId)!,
+      download,
+    })).filter(item => item.song); // Lọc bỏ những bài hát không tìm thấy
   }
 }
 

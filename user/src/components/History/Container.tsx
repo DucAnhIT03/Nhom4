@@ -67,18 +67,19 @@ const Container = () => {
         setLoading(true);
         const historyData = await getHistory(userId);
         
-        // Load thông tin album cho mỗi bài hát
+        // Load ảnh cho mỗi bài hát (ưu tiên ảnh bài hát, fallback về ảnh album)
         const itemsWithAlbum = await Promise.all(
           historyData.map(async (item) => {
-            let albumCover = "./History/s1.jpg"; // Default image
+            let songCover = item.song.coverImage || "./History/s1.jpg"; // Ưu tiên ảnh bài hát
             let albumTitle = "";
             
-            if (item.song.albumId) {
+            // Nếu bài hát không có ảnh, thử lấy từ album
+            if (!item.song.coverImage && item.song.albumId) {
               try {
                 const album = await getAlbumById(item.song.albumId);
                 albumTitle = album.title;
                 if (album.coverImage) {
-                  albumCover = album.coverImage;
+                  songCover = album.coverImage;
                 }
               } catch (error) {
                 console.error(`Error loading album ${item.song.albumId}:`, error);
@@ -87,7 +88,7 @@ const Container = () => {
             
             return {
               ...item,
-              albumCover,
+              albumCover: songCover, // Giữ tên biến để không phải sửa nhiều chỗ
               albumTitle,
             };
           })

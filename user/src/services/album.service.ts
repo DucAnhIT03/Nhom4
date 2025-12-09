@@ -62,3 +62,8 @@ export const getSongsByAlbumId = async (albumId: number): Promise<Song[]> => {
   return response.data;
 };
 
+export const getAlbumsByArtistId = async (artistId: number): Promise<Album[]> => {
+  const response = await axios.get<Album[]>(`${API_BASE_URL}/albums/artist/${artistId}`);
+  return response.data;
+};
+

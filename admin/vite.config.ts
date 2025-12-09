@@ -10,4 +10,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    port: 5175, // Admin chạy trên port 5175
+    strictPort: true, // Bắt buộc dùng port này, không tự động đổi
+  },
 })

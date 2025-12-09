@@ -30,6 +30,7 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [repeatMode, setRepeatMode] = useState<"off" | "one">("off");
 
   // Đăng ký audio element và dừng khi có bài mới được phát từ MusicPlayerBar
   useEffect(() => {
@@ -61,20 +62,31 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
       setDuration(audio.duration);
     };
 
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => {
+      if (repeatMode === "one") {
+        audio.currentTime = 0;
+        audio.play().catch(console.error);
+      } else {
+        setIsPlaying(false);
+      }
+    };
+
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateDuration);
-    audio.addEventListener("play", () => setIsPlaying(true));
-    audio.addEventListener("pause", () => setIsPlaying(false));
-    audio.addEventListener("ended", () => setIsPlaying(false));
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("ended", handleEnded);
 
     return () => {
       audio.removeEventListener("timeupdate", updateTime);
       audio.removeEventListener("loadedmetadata", updateDuration);
-      audio.removeEventListener("play", () => setIsPlaying(true));
-      audio.removeEventListener("pause", () => setIsPlaying(false));
-      audio.removeEventListener("ended", () => setIsPlaying(false));
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("ended", handleEnded);
     };
-  }, []);
+  }, [repeatMode]);
 
   const handlePlayPause = async () => {
     const audio = audioRef.current;
@@ -140,15 +152,30 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
       
       {/* Controls */}
       <div className="flex items-center gap-3 text-gray-400">
-        <button className="hover:text-gray-300 transition" title="Shuffle">
+        <button 
+          className="hover:text-gray-300 transition cursor-not-allowed opacity-50" 
+          title="Shuffle (Not available for individual songs)"
+          disabled
+          onClick={(e) => e.stopPropagation()}
+        >
           <IoShuffleOutline className="text-lg" />
         </button>
-        <button className="hover:text-gray-300 transition" onClick={handleSkipBack} title="Previous">
+        <button 
+          className="hover:text-gray-300 transition" 
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSkipBack();
+          }} 
+          title="Rewind 10s"
+        >
           <IoPlaySkipBackSharp className="text-lg" />
         </button>
         
         <button
-          onClick={handlePlayPause}
+          onClick={(e) => {
+            e.stopPropagation();
+            handlePlayPause();
+          }}
           className="bg-white text-black rounded-full w-9 h-9 flex items-center justify-center hover:bg-gray-100 transition shadow-md"
           title={isPlaying ? "Pause" : "Play"}
         >
@@ -159,10 +186,25 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
           )}
         </button>
         
-        <button className="hover:text-gray-300 transition" onClick={handleSkipForward} title="Next">
+        <button 
+          className="hover:text-gray-300 transition" 
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSkipForward();
+          }} 
+          title="Forward 10s"
+        >
           <IoPlaySkipForwardSharp className="text-lg" />
         </button>
-        <button className="hover:text-gray-300 transition" title="Repeat">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setRepeatMode(repeatMode === "off" ? "one" : "off");
+          }}
+          className={`hover:text-gray-300 transition ${repeatMode === "one" ? "text-[#3BC8E7]" : ""}`}
+          title={repeatMode === "one" ? "Repeat one (on)" : "Repeat off"}
+        >
           <IoRepeatOutline className="text-lg" />
         </button>
       </div>
@@ -177,6 +219,8 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
           max={duration || 0}
           value={currentTime}
           onChange={handleProgressChange}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
           className="flex-1 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer"
           style={{
             background: `linear-gradient(to right, #3BC8E7 0%, #3BC8E7 ${(currentTime / (duration || 1)) * 100}%, rgba(107, 114, 128, 0.5) ${(currentTime / (duration || 1)) * 100}%, rgba(107, 114, 128, 0.5) 100%)`,

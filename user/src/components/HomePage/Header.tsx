@@ -155,7 +155,7 @@ const Header: React.FC = () => {
 
   return (
     <>
-      <div className="bg-[#1B2039] h-20 ml-20 w-auto flex items-center justify-between px-6">
+      <div className="bg-[#1B2039] h-20 ml-20 w-auto flex items-center justify-between px-6 relative z-[100]">
         {/* LEFT SIDE */}
         <div className="flex items-center">
           <div className="flex items-center w-[260px] h-10 rounded-md overflow-hidden shadow border bg-amber-50">

@@ -105,90 +105,136 @@ const Container = () => {
         }
 
         // Load album info cho my favorites
+        // Lọc để đảm bảo không có trùng lặp và chỉ lấy bài có playCount >= 4
+        const uniqueMyFavorites = myFavoritesData.filter((item, index, self) => {
+          // Lọc trùng lặp dựa trên song.id
+          return index === self.findIndex(t => t.song.id === item.song.id);
+        }).filter(item => item.playCount >= 4); // Chỉ lấy bài có >= 4 lần nghe
+
         const myFavoritesWithAlbum = await Promise.all(
-          myFavoritesData.map(async (item) => {
-            let albumCover = "./History/s1.jpg";
+          uniqueMyFavorites.map(async (item) => {
+            // Ưu tiên sử dụng ảnh đại diện của bài hát
+            let songCover = item.song.coverImage || "./History/s1.jpg";
             let albumTitle = "";
             
-            if (item.song.albumId) {
+            // Nếu bài hát không có ảnh, mới lấy từ album
+            if (!item.song.coverImage && item.song.albumId) {
               try {
                 const album = await getAlbumById(item.song.albumId);
                 albumTitle = album.title;
                 if (album.coverImage) {
-                  albumCover = album.coverImage;
+                  songCover = album.coverImage;
                 }
+              } catch (error) {
+                console.error(`Error loading album ${item.song.albumId}:`, error);
+              }
+            } else if (item.song.albumId) {
+              // Vẫn load album title nếu cần
+              try {
+                const album = await getAlbumById(item.song.albumId);
+                albumTitle = album.title;
               } catch (error) {
                 console.error(`Error loading album ${item.song.albumId}:`, error);
               }
             }
             
-            return { ...item, albumCover, albumTitle };
+            return { ...item, albumCover: songCover, albumTitle };
           })
         );
 
         // Load album info cho trending
         const trendingWithAlbum = await Promise.all(
           trendingData.map(async (item) => {
-            let albumCover = "./History/s1.jpg";
+            // Ưu tiên sử dụng ảnh đại diện của bài hát
+            let songCover = item.song.coverImage || "./History/s1.jpg";
             let albumTitle = "";
             
-            if (item.song.albumId) {
+            // Nếu bài hát không có ảnh, mới lấy từ album
+            if (!item.song.coverImage && item.song.albumId) {
               try {
                 const album = await getAlbumById(item.song.albumId);
                 albumTitle = album.title;
                 if (album.coverImage) {
-                  albumCover = album.coverImage;
+                  songCover = album.coverImage;
                 }
+              } catch (error) {
+                console.error(`Error loading album ${item.song.albumId}:`, error);
+              }
+            } else if (item.song.albumId) {
+              // Vẫn load album title nếu cần
+              try {
+                const album = await getAlbumById(item.song.albumId);
+                albumTitle = album.title;
               } catch (error) {
                 console.error(`Error loading album ${item.song.albumId}:`, error);
               }
             }
             
-            return { ...item, albumCover, albumTitle };
+            return { ...item, albumCover: songCover, albumTitle };
           })
         );
 
         // Load album info cho favorite genres
         const favoriteGenresWithAlbum = await Promise.all(
           favoriteGenresData.map(async (item) => {
-            let albumCover = "./History/s1.jpg";
+            // Ưu tiên sử dụng ảnh đại diện của bài hát
+            let songCover = item.song.coverImage || "./History/s1.jpg";
             let albumTitle = "";
             
-            if (item.song.albumId) {
+            // Nếu bài hát không có ảnh, mới lấy từ album
+            if (!item.song.coverImage && item.song.albumId) {
               try {
                 const album = await getAlbumById(item.song.albumId);
                 albumTitle = album.title;
                 if (album.coverImage) {
-                  albumCover = album.coverImage;
+                  songCover = album.coverImage;
                 }
+              } catch (error) {
+                console.error(`Error loading album ${item.song.albumId}:`, error);
+              }
+            } else if (item.song.albumId) {
+              // Vẫn load album title nếu cần
+              try {
+                const album = await getAlbumById(item.song.albumId);
+                albumTitle = album.title;
               } catch (error) {
                 console.error(`Error loading album ${item.song.albumId}:`, error);
               }
             }
             
-            return { ...item, albumCover, albumTitle };
+            return { ...item, albumCover: songCover, albumTitle };
           })
         );
 
         // Load album info cho all-time
         const allTimeWithAlbum = await Promise.all(
           allTimeData.map(async (item) => {
-            let albumCover = "./History/s1.jpg";
+            // Ưu tiên sử dụng ảnh đại diện của bài hát
+            let songCover = item.song.coverImage || "./History/s1.jpg";
             let albumTitle = "";
             
-            if (item.song.albumId) {
+            // Nếu bài hát không có ảnh, mới lấy từ album
+            if (!item.song.coverImage && item.song.albumId) {
               try {
                 const album = await getAlbumById(item.song.albumId);
                 albumTitle = album.title;
                 if (album.coverImage) {
-                  albumCover = album.coverImage;
+                  songCover = album.coverImage;
                 }
+              } catch (error) {
+                console.error(`Error loading album ${item.song.albumId}:`, error);
+              }
+            } else if (item.song.albumId) {
+              // Vẫn load album title nếu cần
+              try {
+                const album = await getAlbumById(item.song.albumId);
+                albumTitle = album.title;
               } catch (error) {
                 console.error(`Error loading album ${item.song.albumId}:`, error);
               }
             }
             
-            return { ...item, albumCover, albumTitle };
+            return { ...item, albumCover: songCover, albumTitle };
           })
         );
 

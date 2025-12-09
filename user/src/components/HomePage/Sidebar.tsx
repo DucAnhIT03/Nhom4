@@ -6,13 +6,13 @@ import {
   FaMicrophone,
   FaBriefcase,
   FaGem,
-  FaDownload,
   FaHeart,
   FaClock,
   FaChevronLeft,
   FaChevronRight,
   FaFolderOpen, // Icon cho "Đăng tải của tôi"
   FaMusic, // Icon cho Playlist
+  FaDownload, // Icon cho Downloads
 } from "react-icons/fa";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -93,9 +93,9 @@ const Sidebar = () => {
   ];
 
   const bottomItems = [
-    { icon: <FaDownload />, label: t('sidebar.downloads'), path: "/dowload" },
     { icon: <FaHeart />, label: t('sidebar.favourites'), path: "/favorite" },
     { icon: <FaClock />, label: t('sidebar.history'), path: "/history" },
+    { icon: <FaDownload />, label: t('sidebar.downloads'), path: "/downloads" },
     { icon: <FaMusic />, label: t('sidebar.playlist'), path: "/playlist" },
   ];
 
@@ -121,12 +121,12 @@ const Sidebar = () => {
     <div
       className={`${
         isOpen ? "w-56" : "w-20"
-      } h-[591px] bg-[#1B2039] mt-[-80px] transition-all duration-300 relative flex flex-col justify-between`}
+      } h-[591px] bg-[#1B2039] mt-[-80px] transition-all duration-300 relative flex flex-col justify-between z-[1000]`}
     >
       {/* Toggle Arrow */}
       <button
         onClick={toggleSidebar}
-        className="absolute -right-3 top-[293px] bg-[#1B2039] text-white rounded-full p-1 z-10"
+        className="absolute -right-3 top-[293px] bg-[#1B2039] text-white rounded-full p-1 z-[1001]"
       >
         {isOpen ? <FaChevronLeft /> : <FaChevronRight />}
       </button>

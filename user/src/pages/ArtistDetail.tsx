@@ -10,7 +10,7 @@ import { getArtistById, type Artist } from "../services/artist.service";
 import { toggleWishlist, getWishlistSongIds } from "../services/wishlist.service";
 import { getCurrentUser } from "../services/auth.service";
 import { addHistory } from "../services/history.service";
-import { getAlbumById } from "../services/album.service";
+import { getAlbumById, getAlbumsByArtistId, type Album } from "../services/album.service";
 import CustomAudioPlayer from "../shared/components/CustomAudioPlayer";
 import { FaComment } from "react-icons/fa";
 import CommentModal from "../components/Comments/CommentModal";
@@ -36,6 +36,7 @@ const ArtistDetail = () => {
   // State lưu trữ dữ liệu
   const [artist, setArtist] = useState<Artist | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   
   // State cho UI
@@ -120,10 +121,11 @@ const ArtistDetail = () => {
           throw new Error("Invalid artist ID");
         }
 
-        // Gọi song song 2 API để tối ưu tốc độ
-        const [artistData, songsData] = await Promise.all([
+        // Gọi song song 3 API để tối ưu tốc độ
+        const [artistData, songsData, albumsData] = await Promise.all([
           getArtistById(artistId),
           getSongsByArtistId(artistId),
+          getAlbumsByArtistId(artistId),
         ]);
 
         // Load thông tin album cho mỗi bài hát
@@ -153,6 +155,7 @@ const ArtistDetail = () => {
         
         setArtist(artistData);
         setSongs(mappedSongs);
+        setAlbums(albumsData);
       } catch (error) {
         console.error("Lỗi không tải được dữ liệu nghệ sĩ:", error);
       } finally {
@@ -276,10 +279,41 @@ const ArtistDetail = () => {
             )}
             
             <p className="text-gray-400 text-sm max-w-xl mt-2">
-              {songs.length} {t('common.songs')}
+              {songs.length} {t('common.songs')} • {albums.length} {t('common.albums')}
             </p>
           </div>
         </div>
+
+        {/* ALBUMS SECTION */}
+        {albums.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-2xl font-bold text-white mb-6">{t('common.albums')}</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+              {albums.map((album) => (
+                <div
+                  key={album.id}
+                  className="cursor-pointer group hover:opacity-90 transition-opacity"
+                  onClick={() => window.location.href = `/album/${album.id}`}
+                >
+                  <img
+                    src={album.coverImage || './slide/product7.jpg'}
+                    alt={album.title}
+                    className="w-full h-[175px] object-cover rounded-[10px] mb-3"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = './slide/product7.jpg';
+                    }}
+                  />
+                  <h3 className="font-semibold text-white truncate text-sm">{album.title}</h3>
+                  {album.releaseDate && (
+                    <p className="text-gray-400 text-xs mt-1">
+                      {new Date(album.releaseDate).getFullYear()}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* SONG LIST */}
         <div className="mt-10 pb-20">

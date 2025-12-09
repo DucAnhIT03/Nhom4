@@ -125,7 +125,13 @@
     "featuredAlbums": "Featured Albums",
     "trendingAlbums": "Trending Albums",
     "top15Albums": "Top 15 Albums",
-    "weeklyTop15": "Weekly Top 15"
+    "weeklyTop15": "Weekly Top 15",
+    "noDownloads": "Chưa có bài hát nào được tải xuống",
+    "downloadToSee": "Tải xuống bài hát để xem ở đây",
+    "remove": "Xóa khỏi danh sách tải xuống",
+    "removeConfirm": "Bạn có chắc chắn muốn xóa bài hát này khỏi danh sách tải xuống?",
+    "removed": "Đã xóa bài hát khỏi danh sách tải xuống",
+    "downloaded": "Đã lưu bài hát để nghe offline"
   },
   "homepage": {
     "recentlyPlayed": "Đã phát gần đây",

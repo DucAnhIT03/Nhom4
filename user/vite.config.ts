@@ -10,4 +10,8 @@ export default defineConfig({
     }),
     tailwindcss(),
   ],
+  server: {
+    port: 5173, // User chạy trên port 5173
+    strictPort: true, // Bắt buộc dùng port này, không tự động đổi
+  },
 })

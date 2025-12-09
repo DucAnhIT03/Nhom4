@@ -24,9 +24,9 @@ const AlbumList = lazy(() => import("./pages/Album.tsx"));
 const AlbumDetail = lazy(() => import("./pages/AlbumDetail.tsx")); 
 
 // 4. User Personal Pages (Cá nhân)
-const Downloads = lazy(() => import("./pages/Dowloads.tsx"));
 const Favourites = lazy(() => import("./pages/Favourites.tsx"));
 const History = lazy(() => import("./pages/History.tsx"));
+const Downloads = lazy(() => import("./pages/Downloads.tsx"));
 const Playlist = lazy(() => import("./pages/Playlist.tsx"));
 
 // 5. ARTIST PAGES (MỚI THÊM)
@@ -82,16 +82,16 @@ const router = createBrowserRouter([
 
       // --- Personal Routes ---
       {
-        path: "dowload", // Giữ nguyên typo theo yêu cầu
-        element: <Downloads />,
-      },
-      {
         path: "favorite",
         element: <Favourites />,
       },
       {
         path: "history",
         element: <History />,
+      },
+      {
+        path: "downloads",
+        element: <Downloads />,
       },
       {
         path: "playlist",

@@ -20,6 +20,8 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
   const [userId, setUserId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [replyingId, setReplyingId] = useState<number | null>(null);
+  const [replyContent, setReplyContent] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 10;
@@ -52,7 +54,9 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
     try {
       setLoading(true);
       const response = await getCommentsBySong({ songId, page, limit });
-      setComments(response.data);
+      // Đảm bảo chỉ lấy comments gốc (không phải reply) để tránh duplicate
+      const rootComments = response.data.filter(comment => !comment.parentId);
+      setComments(rootComments);
       setTotal(response.total);
     } catch (error) {
       console.error('Error loading comments:', error);
@@ -74,7 +78,7 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
         songId,
         content: newComment.trim(),
       });
-      setComments([comment, ...comments]);
+      setComments([{ ...comment, replies: [] }, ...comments]);
       setNewComment('');
       setTotal(total + 1);
     } catch (error) {
@@ -83,15 +87,55 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleReply = async (parentId: number) => {
+    if (!replyContent.trim() || !userId) {
+      alert(t('comments.pleaseLoginAndEnter'));
+      return;
+    }
+
+    try {
+      const reply = await createComment({
+        userId,
+        songId,
+        content: replyContent.trim(),
+        parentId,
+      });
+      
+      // Cập nhật comment gốc để thêm reply vào (không reload để tránh flicker)
+      setComments(comments.map(comment => 
+        comment.id === parentId 
+          ? { ...comment, replies: [...(comment.replies || []), reply] }
+          : comment
+      ));
+      
+      setReplyContent('');
+      setReplyingId(null);
+    } catch (error) {
+      console.error('Error creating reply:', error);
+      alert(t('comments.cannotAdd'));
+    }
+  };
+
+  const handleDelete = async (id: number, isReply: boolean = false, parentId?: number) => {
     if (!confirm(t('comments.confirmDelete'))) {
       return;
     }
 
     try {
       await deleteComment(id);
-      setComments(comments.filter(c => c.id !== id));
-      setTotal(total - 1);
+      
+      if (isReply && parentId) {
+        // Xóa reply khỏi comment gốc
+        setComments(comments.map(comment => 
+          comment.id === parentId 
+            ? { ...comment, replies: (comment.replies || []).filter(r => r.id !== id) }
+            : comment
+        ));
+      } else {
+        // Xóa comment gốc
+        setComments(comments.filter(c => c.id !== id));
+        setTotal(total - 1);
+      }
     } catch (error) {
       console.error('Error deleting comment:', error);
       alert(t('comments.cannotDelete'));
@@ -185,7 +229,25 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
             comments.map((comment) => (
               <div key={comment.id} className="border-b border-[#252B4D] pb-4 last:border-0">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#3BC8E7] flex items-center justify-center text-white font-bold">
+                  {comment.user?.profileImage ? (
+                    <img
+                      src={comment.user.profileImage}
+                      alt={getUserName(comment)}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-[#3BC8E7]"
+                      onError={(e) => {
+                        // Ẩn ảnh và hiển thị avatar với chữ cái đầu
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const fallback = target.nextElementSibling as HTMLElement;
+                        if (fallback) {
+                          fallback.style.display = 'flex';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className={`w-10 h-10 rounded-full bg-[#3BC8E7] flex items-center justify-center text-white font-bold ${comment.user?.profileImage ? 'hidden' : ''}`}
+                  >
                     {getUserName(comment).charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1">
@@ -219,22 +281,113 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
                     ) : (
                       <>
                         <p className="text-gray-300 text-sm mb-2">{comment.content}</p>
-                        {userId === comment.userId && (
-                          <div className="flex gap-3">
+                        <div className="flex gap-3 items-center">
+                          {userId && (
                             <button
-                              onClick={() => handleStartEdit(comment)}
+                              onClick={() => setReplyingId(replyingId === comment.id ? null : comment.id)}
                               className="text-xs text-gray-400 hover:text-[#3BC8E7] transition flex items-center gap-1"
                             >
-                              <FaEdit size={10} />
-                              {t('comments.edit')}
+                              <FaPaperPlane size={10} />
+                              {t('comments.reply')}
                             </button>
-                            <button
-                              onClick={() => handleDelete(comment.id)}
-                              className="text-xs text-gray-400 hover:text-red-400 transition flex items-center gap-1"
-                            >
-                              <FaTrash size={10} />
-                              {t('comments.delete')}
-                            </button>
+                          )}
+                          {userId === comment.userId && (
+                            <>
+                              <button
+                                onClick={() => handleStartEdit(comment)}
+                                className="text-xs text-gray-400 hover:text-[#3BC8E7] transition flex items-center gap-1"
+                              >
+                                <FaEdit size={10} />
+                                {t('comments.edit')}
+                              </button>
+                              <button
+                                onClick={() => handleDelete(comment.id)}
+                                className="text-xs text-gray-400 hover:text-red-400 transition flex items-center gap-1"
+                              >
+                                <FaTrash size={10} />
+                                {t('comments.delete')}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        
+                        {/* Reply form */}
+                        {replyingId === comment.id && (
+                          <div className="mt-3 space-y-2">
+                            <textarea
+                              value={replyContent}
+                              onChange={(e) => setReplyContent(e.target.value)}
+                              placeholder={t('comments.enterReply')}
+                              className="w-full bg-[#14182A] text-white rounded px-3 py-2 resize-none text-sm"
+                              rows={2}
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleReply(comment.id)}
+                                disabled={!replyContent.trim()}
+                                className="px-3 py-1 bg-[#3BC8E7] text-white rounded hover:bg-[#2CC8E5] transition disabled:opacity-50 text-sm"
+                              >
+                                {t('comments.send')}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setReplyingId(null);
+                                  setReplyContent('');
+                                }}
+                                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition text-sm"
+                              >
+                                {t('comments.cancel')}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Replies */}
+                        {comment.replies && comment.replies.length > 0 && (
+                          <div className="mt-4 ml-4 pl-4 border-l-2 border-[#3BC8E7] space-y-3">
+                            {comment.replies.map((reply) => (
+                              <div key={reply.id} className="flex items-start gap-3">
+                                {reply.user?.profileImage ? (
+                                  <img
+                                    src={reply.user.profileImage}
+                                    alt={getUserName(reply)}
+                                    className="w-8 h-8 rounded-full object-cover border-2 border-[#3BC8E7]"
+                                    onError={(e) => {
+                                      // Ẩn ảnh và hiển thị avatar với chữ cái đầu
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const fallback = target.nextElementSibling as HTMLElement;
+                                      if (fallback) {
+                                        fallback.style.display = 'flex';
+                                      }
+                                    }}
+                                  />
+                                ) : null}
+                                <div 
+                                  className={`w-8 h-8 rounded-full bg-[#3BC8E7] flex items-center justify-center text-white font-bold text-xs ${reply.user?.profileImage ? 'hidden' : ''}`}
+                                >
+                                  {getUserName(reply).charAt(0).toUpperCase()}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-semibold text-white text-sm">{getUserName(reply)}</span>
+                                    <span className="text-xs text-gray-400">{formatDate(reply.createdAt)}</span>
+                                  </div>
+                                  <p className="text-gray-300 text-sm mb-2">{reply.content}</p>
+                                  {userId === reply.userId && (
+                                    <div className="flex gap-3">
+                                      <button
+                                        onClick={() => handleDelete(reply.id, true, comment.id)}
+                                        className="text-xs text-gray-400 hover:text-red-400 transition flex items-center gap-1"
+                                      >
+                                        <FaTrash size={10} />
+                                        {t('comments.delete')}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </>

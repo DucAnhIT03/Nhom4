@@ -8,6 +8,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { getArtists, type ArtistWithTotalViews } from "../../services/artist.service";
 import { getSongsByArtistId, getNewReleases } from "../../services/song.service";
 import { getAlbums } from "../../services/album.service";
+import { getTopGenres, type TopGenre } from "../../services/genre.service";
 import CommentModal from "../Comments/CommentModal";
 import { FaComment } from "react-icons/fa";
 
@@ -20,6 +21,7 @@ const Container = () => {
   const [featuredArtists, setFeaturedArtists] = useState<ArtistWithTotalViews[]>([]); // Featured Artists
   const [allAlbums, setAllAlbums] = useState<any[]>([]); // Tất cả albums để tìm album của artist
   const [newReleases, setNewReleases] = useState<any[]>([]); // New Releases
+  const [topGenres, setTopGenres] = useState<TopGenre[]>([]); // Top Genres
   const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
     isOpen: false,
     songId: 0,
@@ -115,6 +117,18 @@ const Container = () => {
     };
 
     fetchNewReleases();
+
+    // API Top Genres
+    const fetchTopGenres = async () => {
+      try {
+        const genres = await getTopGenres(6); // Lấy 6 genres để hiển thị
+        setTopGenres(genres);
+      } catch (error) {
+        console.error("Lỗi fetch top genres:", error);
+      }
+    };
+
+    fetchTopGenres();
   }, []);
 
   const handleSongClick = async (songData: any) => {
@@ -344,15 +358,10 @@ const Container = () => {
             </button>
             {featuredArtists.length > 0 ? (
               featuredArtists.map((artist) => {
-                // Tìm album đầu tiên của artist này từ tất cả albums
-                const artistAlbum = allAlbums.find(album => album.artistId === artist.id);
-                const displayImage = artistAlbum?.coverImage || artist.avatar || './slide/product7.jpg';
-                const displayTitle = artistAlbum?.title || `Best Of ${artist.artistName}`;
-                
                 return (
                   <div 
                     key={artist.id} 
-                    className="text-white w-[175px] h-[217px] cursor-pointer"
+                    className="text-white w-[175px] h-[217px] cursor-pointer hover:opacity-90 transition-opacity"
                     onClick={() => {
                       // Navigate đến trang artist detail
                       window.location.href = `/artist/${artist.id}`;
@@ -360,14 +369,14 @@ const Container = () => {
                   >
                     <img 
                       className="rounded-[10px] mb-[19.18px] w-full h-[175px] object-cover" 
-                      src={displayImage} 
+                      src={artist.avatar || './slide/product7.jpg'} 
                       alt={artist.artistName}
                       onError={(e) => {
                         // Fallback nếu ảnh lỗi
                         (e.target as HTMLImageElement).src = './slide/product7.jpg';
                       }}
                     />
-                    <h3><a href={`/artist/${artist.id}`}>{displayTitle}</a></h3>
+                    <h3 className="font-semibold truncate">{artist.artistName}</h3>
                   </div>
                 );
               })
@@ -549,20 +558,21 @@ const Container = () => {
               featuredAlbums.map((album) => (
                 <div 
                   key={album.id} 
-                  className="text-white w-[175px] h-[217px] cursor-pointer"
+                  className="text-white w-[175px] h-[217px] cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={() => {
-                    // Xử lý khi click vào album (ví dụ: chuyển trang)
-                    // Hiện tại tạm thời log ra console
-                    console.log("Clicked album:", album.title);
+                    window.location.href = `/album/${album.id}`;
                   }}
                 >
                   <img 
                     className="rounded-[10px] mb-[19.18px] w-full h-[175px] object-cover" 
                     src={album.coverImage} 
                     alt={album.title} 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = './slide/product7.jpg';
+                    }}
                   />
                   <h3 className="font-semibold truncate">
-                    <a href="#">{album.title}</a>
+                    {album.title}
                   </h3>
                   <h3 className="text-[#DEDEDE] h-[24px] truncate">
                     {typeof album.artist === 'string' 
@@ -581,7 +591,7 @@ const Container = () => {
           </div>
         </div>
 
-        {/* === TOP GENRES (GIỮ NGUYÊN) === */}
+        {/* === TOP GENRES (ĐÃ GHÉP API) === */}
         <div className="mt-[64px]">
           <div className="flex justify-between">
             <span className="ml-[160px] h-[26px] text-[#3BC8E7] text-[18px] font-semibold ">
@@ -589,54 +599,134 @@ const Container = () => {
             </span>
           </div>
           <div className="flex mt-[26px] ml-[160px] ">
-            <div className="relative w-[369px] h-[369px] rounded-[10px] overflow-hidden mr-[40px]">
-              <img src="./slide/Romantic.jpg" alt="Romantic" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
-              <div className="absolute bottom-4 left-4 text-white">
-                <h3 className="font-medium">Romantic</h3>
+            {/* Genre 0: Ảnh lớn bên trái (369x369) */}
+            {topGenres[0] && (
+              <div 
+                className="relative w-[369px] h-[369px] rounded-[10px] overflow-hidden mr-[40px] cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => window.location.href = `/genres?genre=${encodeURIComponent(topGenres[0].genre.genreName)}`}
+              >
+                <img 
+                  src={topGenres[0].genre.imageUrl || './slide/Romantic.jpg'} 
+                  alt={topGenres[0].genre.genreName} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = './slide/Romantic.jpg';
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
+                <div className="absolute bottom-4 left-4 text-white">
+                  <h3 className="font-medium">{topGenres[0].genre.genreName}</h3>
+                  <p className="text-sm text-gray-300 mt-1">{topGenres[0].songCount} songs</p>
+                </div>
               </div>
-            </div>
+            )}
             <div>
               <div className="flex mb-[20px] ">
-                <div className="relative w-[175px] h-[175px] rounded-[10px] overflow-hidden mr-[32px]">
-                  <img src="./slide/Classical.jpg" alt="Classical" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
-                  <div className="absolute bottom-4 left-4 text-white">
-                    <h3 className="font-medium">Classical</h3>
+                {/* Genre 1: Ảnh nhỏ trên trái (175x175) */}
+                {topGenres[1] && (
+                  <div 
+                    className="relative w-[175px] h-[175px] rounded-[10px] overflow-hidden mr-[32px] cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.location.href = `/genres?genre=${encodeURIComponent(topGenres[1].genre.genreName)}`}
+                  >
+                    <img 
+                      src={topGenres[1].genre.imageUrl || './slide/Classical.jpg'} 
+                      alt={topGenres[1].genre.genreName} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = './slide/Classical.jpg';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <h3 className="font-medium text-sm">{topGenres[1].genre.genreName}</h3>
+                    </div>
                   </div>
-                </div>
-                <div className="relative w-[369px] h-[175px] rounded-[10px] overflow-hidden ">
-                  <img src="./slide/HipHop.jpg" alt="HipHop" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
-                  <div className="absolute bottom-4 left-4 text-white">
-                    <h3 className="font-medium">HipHop</h3>
+                )}
+                {/* Genre 2: Ảnh rộng trên phải (369x175) */}
+                {topGenres[2] && (
+                  <div 
+                    className="relative w-[369px] h-[175px] rounded-[10px] overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.location.href = `/genres?genre=${encodeURIComponent(topGenres[2].genre.genreName)}`}
+                  >
+                    <img 
+                      src={topGenres[2].genre.imageUrl || './slide/HipHop.jpg'} 
+                      alt={topGenres[2].genre.genreName} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = './slide/HipHop.jpg';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <h3 className="font-medium">{topGenres[2].genre.genreName}</h3>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               <div className="flex ">
-                <div className="relative w-[369px] h-[175px] rounded-[10px] overflow-hidden mr-[32px] ">
-                  <img src="./slide/Dancing.jpg" alt="Dancing" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
-                  <div className="absolute bottom-4 left-4 text-white">
-                    <h3 className="font-medium">Dancing</h3>
+                {/* Genre 3: Ảnh rộng dưới trái (369x175) */}
+                {topGenres[3] && (
+                  <div 
+                    className="relative w-[369px] h-[175px] rounded-[10px] overflow-hidden mr-[32px] cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.location.href = `/genres?genre=${encodeURIComponent(topGenres[3].genre.genreName)}`}
+                  >
+                    <img 
+                      src={topGenres[3].genre.imageUrl || './slide/Dancing.jpg'} 
+                      alt={topGenres[3].genre.genreName} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = './slide/Dancing.jpg';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <h3 className="font-medium">{topGenres[3].genre.genreName}</h3>
+                    </div>
                   </div>
-                </div>
-                <div className="relative w-[175px] h-[175px] rounded-[10px] overflow-hidden  ">
-                  <img src="./slide/EDM.jpg" alt="EDM" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
-                  <div className="absolute bottom-4 left-4 text-white">
-                    <h3 className="font-medium">EDM</h3>
+                )}
+                {/* Genre 4: Ảnh nhỏ dưới phải (175x175) */}
+                {topGenres[4] && (
+                  <div 
+                    className="relative w-[175px] h-[175px] rounded-[10px] overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.location.href = `/genres?genre=${encodeURIComponent(topGenres[4].genre.genreName)}`}
+                  >
+                    <img 
+                      src={topGenres[4].genre.imageUrl || './slide/EDM.jpg'} 
+                      alt={topGenres[4].genre.genreName} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = './slide/EDM.jpg';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <h3 className="font-medium text-sm">{topGenres[4].genre.genreName}</h3>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
-            <div className="relative w-[174px] h-[369px] rounded-[10px] overflow-hidden ml-[40px]">
-              <img src="./slide/Rock.jpg" alt="Rock" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
-              <div className="absolute bottom-4 left-4 text-white">
-                <h3 className="font-medium">Rock</h3>
+            {/* Genre 5: Ảnh cao bên phải (174x369) */}
+            {topGenres[5] && (
+              <div 
+                className="relative w-[174px] h-[369px] rounded-[10px] overflow-hidden ml-[40px] cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => window.location.href = `/genres?genre=${encodeURIComponent(topGenres[5].genre.genreName)}`}
+              >
+                <img 
+                  src={topGenres[5].genre.imageUrl || './slide/Rock.jpg'} 
+                  alt={topGenres[5].genre.genreName} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = './slide/Rock.jpg';
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#14182A] via-[#343E69] to-transparent opacity-90"></div>
+                <div className="absolute bottom-4 left-4 text-white">
+                  <h3 className="font-medium">{topGenres[5].genre.genreName}</h3>
+                  <p className="text-sm text-gray-300 mt-1">{topGenres[5].songCount} songs</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

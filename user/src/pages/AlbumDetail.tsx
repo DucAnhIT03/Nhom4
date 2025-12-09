@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaPlay, FaHeart, FaArrowLeft, FaRegHeart, FaPause, FaComment } from "react-icons/fa";
 import { BsThreeDots } from "react-icons/bs";
+import { IoCloudDownloadOutline, IoCheckmarkDoneSharp } from "react-icons/io5";
 import { Gem } from "lucide-react";
 import Header from "../components/HomePage/Header";
 import Sidebar from "../components/HomePage/Sidebar";
@@ -11,6 +12,9 @@ import { incrementSongViews } from "../services/song.service";
 import { toggleWishlist, getWishlistSongIds } from "../services/wishlist.service";
 import { getCurrentUser } from "../services/auth.service";
 import { addHistory } from "../services/history.service";
+import { addDownload, getDownloads } from "../services/download.service";
+import { saveSongToCache } from "../utils/downloadCache.ts";
+import { canPlayPremiumSong, isSongOwner } from "../utils/premiumCheck";
 import CustomAudioPlayer from "../shared/components/CustomAudioPlayer";
 import CommentModal from "../components/Comments/CommentModal";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -50,6 +54,8 @@ const AlbumDetail = () => {
   // State cho Player & UI
   const [isPlaying, setIsPlaying] = useState(false);
   const [likedSongs, setLikedSongs] = useState<number[]>([]);
+  const [downloadedSongs, setDownloadedSongs] = useState<number[]>([]);
+  const [downloading, setDownloading] = useState<Set<number>>(new Set());
   const [userId, setUserId] = useState<number | null>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
@@ -196,8 +202,11 @@ const AlbumDetail = () => {
       try {
         const songIds = await getWishlistSongIds(userId);
         setLikedSongs(songIds);
+
+        const downloads = await getDownloads(userId);
+        setDownloadedSongs(downloads.map(d => d.song.id));
       } catch (error) {
-        console.error("Lỗi không tải được wishlist:", error);
+        console.error("Lỗi không tải được wishlist/downloads:", error);
       }
     };
     loadWishlist();
@@ -288,6 +297,50 @@ const AlbumDetail = () => {
     }
   };
 
+  const handleDownload = async (song: Song) => {
+    if (!song.id || !song.fileUrl) {
+      alert(t('alerts.unknownError'));
+      return;
+    }
+
+    if (!userId) {
+      alert(t('alerts.pleaseLogin'));
+      return;
+    }
+
+    // Premium guard
+    if (song.type === 'PREMIUM') {
+      const owner = isSongOwner(song.artistId);
+      if (!owner) {
+        const result = await canPlayPremiumSong({ type: song.type, artistId: song.artistId });
+        if (!result.canPlay) {
+          alert(result.reason || 'Bài hát này yêu cầu tài khoản Premium để tải.');
+          return;
+        }
+      }
+    }
+
+    if (downloading.has(song.id)) return;
+
+    const nextDownloading = new Set(downloading);
+    nextDownloading.add(song.id);
+    setDownloading(nextDownloading);
+
+    try {
+      await addDownload(userId, song.id);
+      await saveSongToCache(song.id, song.fileUrl);
+      setDownloadedSongs(prev => prev.includes(song.id) ? prev : [...prev, song.id]);
+      alert(t('downloads.downloaded') || 'Đã lưu bài hát để nghe offline');
+    } catch (error) {
+      console.error("Lỗi tải bài hát:", error);
+      alert('Có lỗi khi tải bài hát. Vui lòng thử lại.');
+    } finally {
+      const cleaned = new Set(nextDownloading);
+      cleaned.delete(song.id);
+      setDownloading(cleaned);
+    }
+  };
+
   return (
     <div className="w-[1520px] min-h-screen text-white bg-[#14182A]">
       <Header/>
@@ -352,13 +405,14 @@ const AlbumDetail = () => {
 
         {/* SONG LIST */}
         <div className="mt-10 pb-20">
-          <div className="grid grid-cols-[50px_2fr_1fr_80px_500px] border-b border-[#252B4D] pb-2 text-gray-400 text-sm uppercase px-4 py-3">
+          <div className="grid grid-cols-[50px_2fr_1fr_80px_80px_420px] border-b border-[#252B4D] pb-2 text-gray-400 text-sm uppercase px-4 py-3">
             <span className="text-center flex items-center justify-center">
               <FaHeart className="text-sm" />
             </span>
             <span>{t('common.songTitle')}</span>
             <span>{t('common.artists')}</span>
             <span className="text-center">{t('common.comment')}</span>
+            <span className="text-center">{t('downloads.title')}</span>
             <span className="text-center">{t('common.play')}</span>
           </div>
 
@@ -366,10 +420,11 @@ const AlbumDetail = () => {
             {album.songs && album.songs.length > 0 ? (
                 album.songs.map((song) => {
                     const isLiked = likedSongs.includes(song.id);
+                    const isDownloaded = downloadedSongs.includes(song.id);
                     return (
                     <div 
                         key={song.id} 
-                        className="group grid grid-cols-[50px_2fr_1fr_80px_500px] items-center px-4 py-3 rounded-md hover:bg-[#252B4D] transition cursor-pointer border-b border-transparent hover:border-[#3BC8E7]/20"
+                        className="group grid grid-cols-[50px_2fr_1fr_80px_80px_420px] items-center px-4 py-3 rounded-md hover:bg-[#252B4D] transition cursor-pointer border-b border-transparent hover:border-[#3BC8E7]/20"
                     >
                         <div className="text-center flex justify-center items-center" onClick={(e) => { e.stopPropagation(); toggleLike(song.id); }}>
                             {isLiked ? (
@@ -377,6 +432,29 @@ const AlbumDetail = () => {
                             ) : (
                                 <FaRegHeart className="text-gray-400 hover:text-[#3BC8E7] transition cursor-pointer" />
                             )}
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(song);
+                            }}
+                            disabled={downloading.has(song.id)}
+                            className="text-2xl transition-colors hover:scale-110 disabled:opacity-50"
+                            title={
+                              isDownloaded
+                                ? t('downloads.downloaded') || 'Đã tải'
+                                : song.type === 'PREMIUM'
+                                  ? t('downloads.viewMore') || 'Premium required'
+                                  : t('downloads.title')
+                            }
+                          >
+                            {isDownloaded ? (
+                              <IoCheckmarkDoneSharp className="text-[#3BC8E7]" />
+                            ) : (
+                              <IoCloudDownloadOutline className="text-gray-300 hover:text-white" />
+                            )}
+                          </button>
                         </div>
                         <div className="flex flex-col pr-4">
                             <div className="flex items-center gap-2">
