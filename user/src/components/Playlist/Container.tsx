@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getMostPlayedSongs, addHistory, type MostPlayedItem, getFavoriteGenresPopularSongs, type FavoriteGenresPopularItem } from "../../services/history.service";
 import { getCurrentUser } from "../../services/auth.service";
 import { getAlbumById } from "../../services/album.service";
@@ -27,6 +28,7 @@ interface FavoriteGenresItemWithAlbum extends FavoriteGenresPopularItem {
 type PlaylistTheme = 'themes' | 'my-favorites' | 'trending' | 'favorite-genres' | 'all-time';
 
 const Container = () => {
+  const navigate = useNavigate();
   const [selectedTheme, setSelectedTheme] = useState<PlaylistTheme>('themes');
   const [myFavoritesItems, setMyFavoritesItems] = useState<MostPlayedItemWithAlbum[]>([]);
   const [trendingItems, setTrendingItems] = useState<TrendingSongWithAlbum[]>([]);
@@ -376,7 +378,13 @@ const Container = () => {
                         <FaComment size={14} />
                       </button>
                       <h3 className="font-semibold mb-1">
-                        <span className="hover:text-[#3BC8E7] transition flex items-center gap-1">
+                        <span 
+                          className="hover:text-[#3BC8E7] transition flex items-center gap-1 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/song/${item.song?.id}`);
+                          }}
+                        >
                           {item.song?.title}
                           {item.song?.type === 'PREMIUM' && (
                             <span title="Premium">

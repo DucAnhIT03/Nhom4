@@ -124,6 +124,53 @@ export class CommentService {
   }
 
   /**
+   * Lấy tất cả comments cho admin (với pagination và search)
+   */
+  async findAll(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+  ): Promise<{ data: any[]; total: number; page: number; limit: number }> {
+    const where: any = {};
+    if (search) {
+      where.content = ILike(`%${search}%`);
+    }
+
+    const [data, total] = await this.commentRepository.findAndCount({
+      where,
+      order: { createdAt: "DESC" },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    // Load user và song info cho mỗi comment
+    const commentsWithDetails = await Promise.all(
+      data.map(async (comment) => {
+        const user = await this.userRepository.findOne({ where: { id: comment.userId } });
+        const song = await this.songRepository.findOne({ where: { id: comment.songId } });
+        
+        return {
+          ...comment,
+          user: user ? {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            profileImage: user.profileImage,
+          } : undefined,
+          song: song ? {
+            id: song.id,
+            title: song.title,
+            artistId: song.artistId,
+          } : undefined,
+        };
+      })
+    );
+
+    return { data: commentsWithDetails, total, page, limit };
+  }
+
+  /**
    * Lấy tất cả comments của bài hát do nghệ sĩ sở hữu (bao gồm replies)
    */
   async findByArtistSongs(artistId: number, sortBy: 'time' | 'likes' = 'time'): Promise<Comment[]> {
@@ -191,6 +238,59 @@ export class CommentService {
     }
     
     const comment = await this.findOne(id);
+    await this.commentRepository.remove(comment);
+  }
+
+  /**
+   * Lấy tất cả comments của user (với pagination và search)
+   */
+  async findByUser(
+    userId: number,
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+  ): Promise<{ data: any[]; total: number; page: number; limit: number }> {
+    const where: any = { userId };
+    if (search) {
+      where.content = ILike(`%${search}%`);
+    }
+
+    const [data, total] = await this.commentRepository.findAndCount({
+      where,
+      order: { createdAt: "DESC" },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    // Load song info cho mỗi comment
+    const commentsWithDetails = await Promise.all(
+      data.map(async (comment) => {
+        const song = await this.songRepository.findOne({ where: { id: comment.songId } });
+        
+        return {
+          ...comment,
+          song: song ? {
+            id: song.id,
+            title: song.title,
+            artistId: song.artistId,
+          } : undefined,
+        };
+      })
+    );
+
+    return { data: commentsWithDetails, total, page, limit };
+  }
+
+  /**
+   * Xóa comment của user (chỉ user sở hữu comment mới xóa được)
+   */
+  async removeByUser(id: number, userId: number): Promise<void> {
+    const comment = await this.findOne(id);
+    
+    if (comment.userId !== userId) {
+      throw new ForbiddenException("Bạn không có quyền xóa bình luận này");
+    }
+    
     await this.commentRepository.remove(comment);
   }
 }

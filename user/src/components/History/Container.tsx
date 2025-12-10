@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getHistory, addHistory, type HistoryItem } from "../../services/history.service";
 import { getCurrentUser } from "../../services/auth.service";
 import { getAlbumById } from "../../services/album.service";
@@ -15,6 +16,7 @@ interface HistoryItemWithAlbum extends HistoryItem {
 }
 
 const Container = () => {
+  const navigate = useNavigate();
   const [historyItems, setHistoryItems] = useState<HistoryItemWithAlbum[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
@@ -270,7 +272,13 @@ const Container = () => {
                     <FaComment size={14} />
                   </button>
                   <h3 className="font-semibold mb-1">
-                    <span className="hover:text-[#3BC8E7] transition flex items-center gap-1">
+                    <span 
+                      className="hover:text-[#3BC8E7] transition flex items-center gap-1 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/song/${item.song.id}`);
+                      }}
+                    >
                       {item.song.title}
                       {item.song.type === 'PREMIUM' && (
                         <span title="Premium">
@@ -320,7 +328,13 @@ const Container = () => {
                       <FaComment size={14} />
                     </button>
                     <h3>
-                      <span className="hover:text-[#3BC8E7] transition flex items-center gap-1">
+                      <span 
+                        className="hover:text-[#3BC8E7] transition flex items-center gap-1 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/song/${item.song.id}`);
+                        }}
+                      >
                         {item.song.title}
                         {item.song.type === 'PREMIUM' && (
                           <span title="Premium">

@@ -1,25 +1,27 @@
 import axios from "axios";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaChevronRight, FaChevronLeft } from "react-icons/fa";
 import { HiDotsHorizontal } from "react-icons/hi";
 import { Gem } from "lucide-react";
 import { useMusic, type Song } from "../../contexts/MusicContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { getArtists, type ArtistWithTotalViews } from "../../services/artist.service";
-import { getSongsByArtistId, getNewReleases } from "../../services/song.service";
+import { getSongsByArtistId, getNewReleases, getWeeklyTopTracks } from "../../services/song.service";
 import { getAlbums } from "../../services/album.service";
 import { getTopGenres, type TopGenre } from "../../services/genre.service";
 import CommentModal from "../Comments/CommentModal";
 import { FaComment } from "react-icons/fa";
 
 const Container = () => {
-  const { currentlyPlayingSong, setCurrentlyPlayingSong, setQueue, setCurrentIndex } = useMusic();
+  const navigate = useNavigate();
+  const { setCurrentlyPlayingSong, setQueue, setCurrentIndex } = useMusic();
   const { t } = useLanguage();
   const [songs, setSongs] = useState<any[]>([]); // Recently Played
   const [weeklySongs, setWeeklySongs] = useState<any[]>([]); // Weekly Top 15
+  const [songDurations, setSongDurations] = useState<Record<number, string>>({}); // Lưu duration đã load từ audio
   const [featuredAlbums, setFeaturedAlbums] = useState<any[]>([]); // State mới cho Featured Albums
   const [featuredArtists, setFeaturedArtists] = useState<ArtistWithTotalViews[]>([]); // Featured Artists
-  const [allAlbums, setAllAlbums] = useState<any[]>([]); // Tất cả albums để tìm album của artist
   const [newReleases, setNewReleases] = useState<any[]>([]); // New Releases
   const [topGenres, setTopGenres] = useState<TopGenre[]>([]); // Top Genres
   const [commentModal, setCommentModal] = useState<{ isOpen: boolean; songId: number; songTitle: string }>({
@@ -37,20 +39,46 @@ const Container = () => {
       .then((res) => setSongs(res.data.slice(0, 6)));
 
     // API Weekly Top 15
-    axios
-      .get("http://localhost:3000/songs")
-      .then((res) => {
-        setWeeklySongs(res.data);
-      })
-      .catch((err) => console.log("Lỗi fetch weekly songs:", err));
+    const fetchWeeklyTopSongs = async () => {
+      try {
+        const topTracks = await getWeeklyTopTracks(15);
+        // Map từ TrendingSong[] sang format song đơn giản
+        const mappedSongs = topTracks.map(track => ({
+          id: track.song.id,
+          title: track.song.title,
+          description: track.song.artist?.artistName || "Unknown Artist",
+          artist: track.song.artist,
+          coverImage: track.song.coverImage || './slide/Song1.jpg',
+          fileUrl: track.song.fileUrl,
+          duration: track.song.duration, // Lấy duration từ song object
+          type: track.song.type,
+          artistId: track.song.artistId,
+          playCount: track.playCount,
+        }));
+        setWeeklySongs(mappedSongs);
+      } catch (err) {
+        console.log("Lỗi fetch weekly songs:", err);
+        // Fallback: dùng API cũ nếu weekly top tracks không hoạt động
+        try {
+          const res = await axios.get("http://localhost:3000/songs");
+          // Đảm bảo duration được lấy từ response
+          const songsWithDuration = res.data.slice(0, 15).map((song: any) => ({
+            ...song,
+            duration: song.duration || undefined, // Đảm bảo duration được giữ nguyên
+          }));
+          setWeeklySongs(songsWithDuration);
+        } catch (fallbackErr) {
+          console.log("Lỗi fetch fallback songs:", fallbackErr);
+        }
+      }
+    };
+    fetchWeeklyTopSongs();
 
     // API Featured Albums (MỚI)
     getAlbums()
       .then((albums) => {
         // Lấy 6 album đầu tiên để hiển thị
         setFeaturedAlbums(albums.slice(0, 6));
-        // Lưu tất cả albums để tìm album của artist
-        setAllAlbums(albums);
       })
       .catch((err) => console.log("Lỗi fetch albums:", err));
 
@@ -130,6 +158,156 @@ const Container = () => {
 
     fetchTopGenres();
   }, []);
+
+  // Load duration từ audio metadata cho các bài hát không có duration
+  useEffect(() => {
+    if (weeklySongs.length === 0) return;
+
+    const loadDurationsFromAudio = async () => {
+      const durationMap: Record<number, string> = {};
+      
+      await Promise.all(
+        weeklySongs.map(async (song) => {
+          if ((!song.duration || song.duration === '0:00' || song.duration === '00:00:00') && song.fileUrl) {
+            try {
+              const audio = new Audio(song.fileUrl);
+              await new Promise<void>((resolve) => {
+                const handleLoadedMetadata = () => {
+                  if (audio.duration && isFinite(audio.duration) && audio.duration > 0) {
+                    const mins = Math.floor(audio.duration / 60);
+                    const secs = Math.floor(audio.duration % 60);
+                    durationMap[song.id] = `${mins}:${secs.toString().padStart(2, '0')}`;
+                  }
+                  audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                  audio.removeEventListener('error', handleError);
+                  resolve();
+                };
+                
+                const handleError = () => {
+                  audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                  audio.removeEventListener('error', handleError);
+                  resolve();
+                };
+                
+                audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+                audio.addEventListener('error', handleError);
+                audio.load();
+                
+                // Timeout sau 5 giây
+                setTimeout(() => {
+                  audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                  audio.removeEventListener('error', handleError);
+                  resolve();
+                }, 5000);
+              });
+            } catch (error) {
+              console.error(`Error loading duration for song ${song.id}:`, error);
+            }
+          }
+        })
+      );
+      
+      if (Object.keys(durationMap).length > 0) {
+        setSongDurations(prev => ({ ...prev, ...durationMap }));
+      }
+    };
+    
+    loadDurationsFromAudio();
+  }, [weeklySongs]);
+
+  // Load duration từ audio metadata cho New Releases
+  useEffect(() => {
+    if (newReleases.length === 0) return;
+
+    const loadDurationsFromAudio = async () => {
+      const durationMap: Record<number, string> = {};
+      
+      await Promise.all(
+        newReleases.map(async (song) => {
+          if ((!song.duration || song.duration === '0:00' || song.duration === '00:00:00') && song.fileUrl) {
+            try {
+              const audio = new Audio(song.fileUrl);
+              await new Promise<void>((resolve) => {
+                const handleLoadedMetadata = () => {
+                  if (audio.duration && isFinite(audio.duration) && audio.duration > 0) {
+                    const mins = Math.floor(audio.duration / 60);
+                    const secs = Math.floor(audio.duration % 60);
+                    durationMap[song.id] = `${mins}:${secs.toString().padStart(2, '0')}`;
+                  }
+                  audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                  audio.removeEventListener('error', handleError);
+                  resolve();
+                };
+                
+                const handleError = () => {
+                  audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                  audio.removeEventListener('error', handleError);
+                  resolve();
+                };
+                
+                audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+                audio.addEventListener('error', handleError);
+                audio.load();
+                
+                // Timeout sau 5 giây
+                setTimeout(() => {
+                  audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                  audio.removeEventListener('error', handleError);
+                  resolve();
+                }, 5000);
+              });
+            } catch (error) {
+              console.error(`Error loading duration for new release song ${song.id}:`, error);
+            }
+          }
+        })
+      );
+      
+      if (Object.keys(durationMap).length > 0) {
+        setSongDurations(prev => ({ ...prev, ...durationMap }));
+      }
+    };
+    
+    loadDurationsFromAudio();
+  }, [newReleases]);
+
+  // Hàm format duration từ string (HH:MM:SS, MM:SS) hoặc seconds
+  const formatDuration = (duration?: string | number): string => {
+    if (!duration) return "0:00";
+    
+    // Nếu là số (seconds), convert sang MM:SS
+    if (typeof duration === 'number') {
+      const mins = Math.floor(duration / 60);
+      const secs = Math.floor(duration % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    // Nếu là string số (seconds as string), parse và convert
+    const numDuration = parseFloat(duration);
+    if (!isNaN(numDuration) && isFinite(numDuration)) {
+      const mins = Math.floor(numDuration / 60);
+      const secs = Math.floor(numDuration % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    // Nếu đã là format HH:MM:SS hoặc MM:SS, giữ nguyên hoặc format lại
+    const parts = duration.split(':');
+    if (parts.length === 3) {
+      // HH:MM:SS -> MM:SS (bỏ giờ nếu < 1 giờ)
+      const hours = parseInt(parts[0]) || 0;
+      const mins = parseInt(parts[1]) || 0;
+      const secs = parseInt(parts[2]) || 0;
+      if (hours > 0) {
+        return `${hours * 60 + mins}:${secs.toString().padStart(2, '0')}`;
+      }
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    } else if (parts.length === 2) {
+      // MM:SS -> giữ nguyên
+      return duration;
+    }
+    
+    return duration; // Fallback: trả về nguyên bản
+  };
 
   const handleSongClick = async (songData: any) => {
     // Kiểm tra premium trước khi phát
@@ -246,7 +424,13 @@ const Container = () => {
           
           {/* Thông tin */}
           <span className="flex-1 text-[14px] overflow-hidden">
-            <h3 className="w-full h-[20px] mb-[6.8px] truncate font-semibold flex items-center gap-1">
+            <h3 
+              className="w-full h-[20px] mb-[6.8px] truncate font-semibold flex items-center gap-1 hover:text-[#3BC8E7] transition cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/song/${song.id}`);
+              }}
+            >
               {song.title}
               {song.type === 'PREMIUM' && (
                 <span title="Premium">
@@ -262,7 +446,9 @@ const Container = () => {
           </span>
 
           {/* Thời gian & Menu */}
-          <h3 className="text-[15px] mx-2">5:10</h3>
+          <h3 className="text-[15px] mx-2">
+            {songDurations[song.id] || formatDuration(song.duration || song.song?.duration)}
+          </h3>
           <HiDotsHorizontal className="" />
         </div>
       </div>
@@ -455,7 +641,7 @@ const Container = () => {
                     const songImage = song.coverImage || './slide/Song1.jpg';
                     const songTitle = song.title || 'Unknown';
                     const songArtist = song.artist?.artistName || song.artist || 'Unknown Artist';
-                    const songDuration = song.duration || '0:00';
+                    const songDuration = songDurations[song.id] || formatDuration(song.duration);
                     
                     return (
                       <div
@@ -483,7 +669,13 @@ const Container = () => {
                           }}
                         />
                         <span className="mr-[6.67px] text-[14px] ml-[20px]">
-                          <h3 className="w-[126px] h-[20px] mb-[6.8px] truncate flex items-center gap-1">
+                          <h3 
+                            className="w-[126px] h-[20px] mb-[6.8px] truncate flex items-center gap-1 hover:text-[#3BC8E7] transition cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/song/${song.id}`);
+                            }}
+                          >
                             {songTitle}
                             {song.type === 'PREMIUM' && (
                               <span title="Premium">

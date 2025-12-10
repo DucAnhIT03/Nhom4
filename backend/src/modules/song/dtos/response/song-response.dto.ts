@@ -5,6 +5,8 @@ export class SongResponseDto {
   artistId!: number;
   albumId!: number;
   fileUrl?: string;
+  description?: string;
+  lyrics?: string;
   type?: "FREE" | "PREMIUM";
   views!: number;
   createdAt!: Date;

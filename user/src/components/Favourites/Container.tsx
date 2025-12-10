@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { IoClose } from "react-icons/io5";
 import { FaChevronRight } from "react-icons/fa";
 import { Gem } from "lucide-react";
@@ -24,6 +25,7 @@ interface HistoryItemWithAlbum extends HistoryItem {
 }
 
 const Container = () => {
+  const navigate = useNavigate();
   const [showAll, setShowAll] = useState(false);
   const [songs, setSongs] = useState<SongWithAlbum[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,14 +128,16 @@ const Container = () => {
         // Load album info cho mỗi bài hát
         const historyWithAlbum = await Promise.all(
           recentHistory.map(async (item) => {
-            let albumCover = "./Featured Albums/Anh1.png";
+            // Ưu tiên sử dụng coverImage của bài hát
+            let albumCover = item.song.coverImage || "./Featured Albums/Anh1.png";
             let albumTitle = "";
             
             if (item.song.albumId) {
               try {
                 const album = await getAlbumById(item.song.albumId);
                 albumTitle = album.title;
-                if (album.coverImage) {
+                // Chỉ dùng ảnh album nếu bài hát không có coverImage
+                if (!item.song.coverImage && album.coverImage) {
                   albumCover = album.coverImage;
                 }
               } catch (error) {
@@ -307,7 +311,13 @@ const Container = () => {
                   className="text-[15px] text-white border-b border-[#2E3358] hover:bg-[#1B1E3D] transition"
                 >
                   <td className="py-3 px-2">{(index + 1).toString().padStart(2, "0")}</td>
-                  <td className="py-3 text-[#3BC8E7] cursor-pointer hover:underline">
+                  <td 
+                    className="py-3 text-[#3BC8E7] cursor-pointer hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/song/${item.song.id}`);
+                    }}
+                  >
                     <div className="flex items-center gap-2">
                       {item.song.title}
                       {item.song.type === 'PREMIUM' && (

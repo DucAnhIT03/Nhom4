@@ -115,6 +115,8 @@ CREATE TABLE IF NOT EXISTS songs (
   genre_id INT NULL,
   cover_image VARCHAR(255) NULL,
   file_url VARCHAR(255) NULL,
+  description LONGTEXT NULL,
+  lyrics LONGTEXT NULL,
   type ENUM('FREE','PREMIUM') NOT NULL DEFAULT 'FREE',
   views INT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -313,6 +315,12 @@ CREATE TABLE IF NOT EXISTS banners (
 -- ADD COLUMN type ENUM('FREE','PREMIUM') NOT NULL DEFAULT 'FREE' AFTER file_url;
 -- ALTER TABLE songs 
 -- ADD INDEX idx_song_type (type);
+
+-- ============================================================
+-- Migration: Thêm column description và lyrics vào bảng songs
+-- Đã được thêm vào CREATE TABLE ở trên, nhưng nếu database đã tồn tại,
+-- chạy file migration_add_song_description_lyrics.sql để thêm các columns này
+-- ============================================================
 
 -- ============================================================
 -- Seed tài khoản admin mặc định (dùng cho môi trường dev/test)

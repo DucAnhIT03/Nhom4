@@ -58,42 +58,46 @@ export class GenreService {
       throw new NotFoundException("Song not found");
     }
 
+    // Xóa tất cả genres cũ trong bảng song_genre
     await this.songGenreRepository.delete({ songId: dto.songId });
 
-    const entities = dto.genreIds.map((genreId) =>
-      this.songGenreRepository.create({ songId: dto.songId, genreId }),
-    );
-    await this.songGenreRepository.save(entities);
+    // Thêm genres mới vào bảng song_genre
+    if (dto.genreIds.length > 0) {
+      const entities = dto.genreIds.map((genreId) =>
+        this.songGenreRepository.create({ songId: dto.songId, genreId }),
+      );
+      await this.songGenreRepository.save(entities);
+    }
 
+    // Cập nhật genreId trong bảng songs (để tương thích ngược)
+    // Sử dụng genre đầu tiên nếu có, hoặc null nếu không có genre nào
+    const updateData: any = { genreId: dto.genreIds.length > 0 ? dto.genreIds[0] : null };
+    
     // Tự động tìm album của thể loại đầu tiên và cập nhật albumId của bài hát
     // (ưu tiên album của thể loại hơn album của nghệ sĩ)
     if (dto.genreIds.length > 0) {
       const firstGenreId = dto.genreIds[0];
       const album = await this.albumService.findByGenreId(firstGenreId);
       if (album) {
-        await this.songRepository.update(dto.songId, { albumId: album.id });
+        updateData.albumId = album.id;
       }
     }
+    
+    // Cập nhật song với genreId và albumId mới
+    await this.songRepository.update(dto.songId, updateData);
   }
 
   async getGenresOfSong(songId: number): Promise<Genre[]> {
-    // Lấy genres từ bảng song_genre
+    // Chỉ lấy genres từ bảng song_genre (many-to-many relationship)
+    // Đây là nguồn chính xác nhất vì đã được cập nhật qua updateSongGenres
     const links = await this.songGenreRepository.find({ where: { songId } });
-    const genreIdsFromLinks = links.map((l) => l.genreId);
     
-    // Lấy genreId từ song (nếu có) để tương thích ngược
-    const song = await this.songRepository.findOne({ where: { id: songId } });
-    const allGenreIds = new Set<number>(genreIdsFromLinks);
-    
-    if (song && song.genreId) {
-      allGenreIds.add(song.genreId);
-    }
-    
-    if (allGenreIds.size === 0) {
+    if (links.length === 0) {
       return [];
     }
     
-    return this.genreRepository.findBy({ id: In(Array.from(allGenreIds)) });
+    const genreIds = links.map((l) => l.genreId);
+    return this.genreRepository.findBy({ id: In(genreIds) });
   }
 
   /**

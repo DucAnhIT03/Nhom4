@@ -17,6 +17,11 @@ export interface Comment {
     email: string;
     profileImage?: string;
   };
+  song?: {
+    id: number;
+    title: string;
+    artistId: number;
+  };
   replies?: Comment[];
 }
 
@@ -99,6 +104,38 @@ export const getCommentsByArtist = async (artistId: number, sortBy: 'time' | 'li
 export const deleteCommentByArtist = async (id: number): Promise<void> => {
   const token = localStorage.getItem('token');
   await axios.delete(`${API_BASE_URL}/comments/artist/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+export interface UserCommentResponse {
+  data: Comment[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export const getCommentsByUser = async (
+  userId: number,
+  page: number = 1,
+  limit: number = 10,
+  search?: string
+): Promise<UserCommentResponse> => {
+  const token = localStorage.getItem('token');
+  const response = await axios.get<UserCommentResponse>(`${API_BASE_URL}/comments/user/${userId}`, {
+    params: { page, limit, search },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+};
+
+export const deleteCommentByUser = async (id: number): Promise<void> => {
+  const token = localStorage.getItem('token');
+  await axios.delete(`${API_BASE_URL}/comments/user/${id}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

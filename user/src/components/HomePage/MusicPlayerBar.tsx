@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   IoPlaySharp,
   IoPauseSharp,
@@ -35,6 +36,7 @@ const formatTime = (time: number) => {
 };
 
 const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
+  const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const {
     currentlyPlayingSong: contextSong,
@@ -338,6 +340,18 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
         audio.pause();
         // setIsPlaying sẽ được cập nhật bởi event listener 'pause'
       } else {
+        // Dừng tất cả audio khác trước khi phát
+        stopAllAudio(audio);
+        
+        // Đảm bảo dừng tất cả audio khác trong document
+        const allAudios = document.querySelectorAll('audio');
+        allAudios.forEach((otherAudio) => {
+          if (otherAudio !== audio && !otherAudio.paused) {
+            otherAudio.pause();
+            otherAudio.currentTime = 0;
+          }
+        });
+        
         await audio.play();
         // setIsPlaying sẽ được cập nhật bởi event listener 'play'
       }
@@ -458,7 +472,12 @@ const MusicPlayerBar = ({ song: songProp }: MusicPlayerBarProps) => {
         <div className="flex items-center">
           <img src={song.image} className="w-[64px] h-[64px] rounded-md mr-4" />
           <div className="flex-1">
-            <h4 className="font-bold">{song.title}</h4>
+            <h4 
+              className="font-bold cursor-pointer hover:text-[#3BC8E7] transition"
+              onClick={() => song.id && navigate(`/song/${song.id}`)}
+            >
+              {song.title}
+            </h4>
             <p className="text-[#DEDEDE] text-sm">{String(song.artist || t('common.unknownArtist'))}</p>
           </div>
           {song.id && (

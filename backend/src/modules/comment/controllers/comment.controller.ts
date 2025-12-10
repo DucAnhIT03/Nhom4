@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards, ForbiddenException } from "@nestjs/common";
 import { AuthGuard } from "../../../common/guards/auth.guard";
 import { CurrentUser } from "../../../common/decorators/current-user.decorator";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -60,6 +60,43 @@ export class CommentController {
     @CurrentUser() user: any,
   ) {
     return this.commentService.removeByArtist(id, user.id);
+  }
+
+  @ApiOperation({ summary: "Lấy tất cả bình luận (Admin)" })
+  @Get("admin/all")
+  findAll(
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("search") search?: string,
+  ) {
+    return this.commentService.findAll(page, limit, search);
+  }
+
+  @ApiOperation({ summary: "Lấy comments của user (User quản lý comments của mình)" })
+  @Get("user/:userId")
+  @UseGuards(AuthGuard)
+  findByUser(
+    @Param("userId", ParseIntPipe) userId: number,
+    @CurrentUser() user: any,
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("search") search?: string,
+  ) {
+    // Chỉ cho phép user xem comments của chính họ
+    if (user.id !== userId) {
+      throw new ForbiddenException("Bạn không có quyền xem comments của user khác");
+    }
+    return this.commentService.findByUser(userId, page, limit, search);
+  }
+
+  @ApiOperation({ summary: "Xóa bình luận của user (chỉ user sở hữu comment mới xóa được)" })
+  @Delete("user/:id")
+  @UseGuards(AuthGuard)
+  removeByUser(
+    @Param("id", ParseIntPipe) id: number,
+    @CurrentUser() user: any,
+  ) {
+    return this.commentService.removeByUser(id, user.id);
   }
 }
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, Music, Search, Calendar, Loader2, X, Upload, XCircle, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat } from 'lucide-react';
 import {
   getMyAlbums,
@@ -15,6 +16,7 @@ import {
   type CreateSongDto,
 } from '../../services/artist-my-content.service';
 import { uploadFile } from '../../services/upload.service';
+import { useMusic } from '../../contexts/MusicContext';
 
 interface MyAlbumsTabProps {
   onAlbumClick?: (album: MyAlbum) => void;
@@ -253,6 +255,7 @@ const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({
 };
 
 const MyAlbumsTab: React.FC<MyAlbumsTabProps> = ({ onAlbumClick }) => {
+  const navigate = useNavigate();
   const [albums, setAlbums] = useState<MyAlbum[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -269,6 +272,7 @@ const MyAlbumsTab: React.FC<MyAlbumsTabProps> = ({ onAlbumClick }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRefs = useRef<{ [key: number]: HTMLAudioElement | null }>({});
   const limit = 10;
+  const { currentlyPlayingSong } = useMusic();
 
   const [albumForm, setAlbumForm] = useState({
     title: '',
@@ -307,6 +311,18 @@ const MyAlbumsTab: React.FC<MyAlbumsTabProps> = ({ onAlbumClick }) => {
       loadAlbumSongs(selectedAlbum.id);
     }
   }, [selectedAlbum]);
+
+  // Dừng audio trong MyAlbumsTab khi có bài hát khác được phát từ MusicContext
+  useEffect(() => {
+    if (currentlyPlayingSong && isPlaying && playingSongId) {
+      const audio = audioRefs.current[playingSongId];
+      if (audio) {
+        audio.pause();
+        setIsPlaying(false);
+        setPlayingSongId(null);
+      }
+    }
+  }, [currentlyPlayingSong]);
 
   const loadAlbums = async () => {
     setLoading(true);
@@ -732,7 +748,12 @@ const MyAlbumsTab: React.FC<MyAlbumsTabProps> = ({ onAlbumClick }) => {
                   <tr key={song.id} className="border-b border-gray-700 hover:bg-[#252d4d] transition">
                     <td className="p-4 font-medium text-white flex items-center gap-3">
                       <Music size={20} className="text-[#3BC8E7]" />
-                      {song.title}
+                      <span 
+                        className="hover:text-[#3BC8E7] transition cursor-pointer"
+                        onClick={() => navigate(`/song/${song.id}`)}
+                      >
+                        {song.title}
+                      </span>
                     </td>
                     <td className="p-4">
                       {song.fileUrl ? (
@@ -742,13 +763,23 @@ const MyAlbumsTab: React.FC<MyAlbumsTabProps> = ({ onAlbumClick }) => {
                           currentTime={playingSongId === song.id ? currentTime : 0}
                           duration={playingSongId === song.id ? duration : 0}
                           onPlay={() => {
-                            // Dừng tất cả các bài hát khác
+                            // Dừng tất cả các bài hát khác trong component này
                             Object.values(audioRefs.current).forEach(audio => {
                               if (audio && audio !== audioRefs.current[song.id]) {
                                 audio.pause();
                                 audio.currentTime = 0;
                               }
                             });
+                            
+                            // Dừng TẤT CẢ audio elements khác trong document để đảm bảo không có audio nào khác phát
+                            const allAudios = document.querySelectorAll('audio');
+                            allAudios.forEach((otherAudio) => {
+                              if (otherAudio !== audioRefs.current[song.id] && !otherAudio.paused) {
+                                otherAudio.pause();
+                                otherAudio.currentTime = 0;
+                              }
+                            });
+                            
                             setPlayingSongId(song.id);
                             setIsPlaying(true);
                           }}

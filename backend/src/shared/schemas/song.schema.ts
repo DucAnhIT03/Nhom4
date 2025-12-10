@@ -35,6 +35,12 @@ export class Song {
   @Column({ name: "file_url", length: 255, nullable: true })
   fileUrl?: string;
 
+  @Column({ type: "longtext", nullable: true })
+  description?: string;
+
+  @Column({ type: "longtext", nullable: true })
+  lyrics?: string;
+
   @Column({ type: "enum", enum: ["FREE", "PREMIUM"], nullable: false, default: "FREE" })
   type!: "FREE" | "PREMIUM";
 

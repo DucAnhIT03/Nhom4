@@ -180,6 +180,35 @@ const Header: React.FC = () => {
 
         {/* RIGHT SIDE */}
         <div className="flex items-center space-x-6 text-white">
+          {/* Logo */}
+          <div className="flex items-center mr-4">
+            <img
+              src="/Sidebar/logo.png"
+              alt="Logo"
+              className="w-12 h-12 object-contain cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => navigate("/")}
+              onError={(e) => {
+                console.error('Logo failed to load:', e);
+                // Fallback: thử các đường dẫn khác nhau
+                const img = e.target as HTMLImageElement;
+                const currentSrc = img.src;
+                
+                if (!currentSrc.includes('./Sidebar/logo.png')) {
+                  img.src = './Sidebar/logo.png';
+                } else if (!currentSrc.includes(window.location.origin + '/Sidebar/logo.png')) {
+                  img.src = window.location.origin + '/Sidebar/logo.png';
+                } else {
+                  // Nếu tất cả đều fail, hiển thị placeholder text
+                  img.style.display = 'none';
+                  const placeholder = document.createElement('span');
+                  placeholder.textContent = 'Logo';
+                  placeholder.className = 'text-white text-sm font-semibold cursor-pointer';
+                  placeholder.onclick = () => navigate("/");
+                  img.parentElement?.appendChild(placeholder);
+                }
+              }}
+            />
+          </div>
           <LanguageDropdown />
 
           {/* Chưa đăng nhập */}

@@ -38,17 +38,41 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
     if (audio) {
       registerAudio(audio);
       
-      // Nếu có bài mới được phát từ MusicPlayerBar, dừng audio này
-      if (currentlyPlayingSong && currentlyPlayingSong.audioUrl !== src) {
-        audio.pause();
-        setIsPlaying(false);
-      }
-      
       return () => {
         unregisterAudio(audio);
       };
     }
-  }, [src, currentlyPlayingSong, registerAudio, unregisterAudio]);
+  }, [registerAudio, unregisterAudio]);
+
+  // Dừng audio này khi có bài mới được phát từ MusicPlayerBar
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && currentlyPlayingSong) {
+      // Nếu có bài đang phát từ MusicPlayerBar và không phải bài này, dừng lại
+      if (currentlyPlayingSong.audioUrl !== src) {
+        audio.pause();
+        setIsPlaying(false);
+        audio.currentTime = 0;
+      }
+    }
+  }, [currentlyPlayingSong, src]);
+
+  // Lắng nghe sự kiện play từ audio element này để dừng các audio khác
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handlePlay = () => {
+      // Khi audio này phát, dừng tất cả các audio khác
+      stopAllAudio(audio);
+    };
+
+    audio.addEventListener('play', handlePlay);
+    
+    return () => {
+      audio.removeEventListener('play', handlePlay);
+    };
+  }, [stopAllAudio]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -118,8 +142,18 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
         }
       }
 
-      // Dừng tất cả audio khác trước khi phát
+      // Dừng tất cả audio khác trước khi phát (bao gồm MusicPlayerBar và các CustomAudioPlayer khác)
       stopAllAudio(audio);
+      
+      // Đảm bảo dừng tất cả audio khác (bao gồm cả audio không đăng ký)
+      const allAudios = document.querySelectorAll('audio');
+      allAudios.forEach((otherAudio) => {
+        if (otherAudio !== audio && !otherAudio.paused) {
+          otherAudio.pause();
+          otherAudio.currentTime = 0;
+        }
+      });
+      
       audio.play();
       if (onPlay) onPlay();
     }

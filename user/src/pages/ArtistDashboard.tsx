@@ -221,6 +221,7 @@ const ArtistDashboard = () => {
     title: "", 
     artist: "",     
     description: "", 
+    lyrics: "", // Lời bài hát
     genre: "Pop", 
     status: "Public", 
     albumId: "" as string | number,
@@ -627,6 +628,12 @@ const ArtistDashboard = () => {
         if (songForm.duration) {
             payload.duration = songForm.duration;
         }
+        if (songForm.lyrics) {
+            payload.lyrics = songForm.lyrics;
+        }
+        if (songForm.description) {
+            payload.description = songForm.description;
+        }
 
         if (editingSong) {
             await updateMySong(editingSong.id as number, payload);
@@ -637,7 +644,7 @@ const ArtistDashboard = () => {
         } else {
             await createMySong(payload);
             await fetchData();
-            setSongForm({ title: "", artist: "", description: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", type: "FREE", file: null, fileName: "", coverFile: null, coverPreview: "" });
+            setSongForm({ title: "", artist: "", description: "", lyrics: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", type: "FREE", file: null, fileName: "", coverFile: null, coverPreview: "" });
             setActiveTab("songs");
             alert("Đăng tải bài hát thành công!");
         }
@@ -724,6 +731,7 @@ const ArtistDashboard = () => {
         artist: song.artist || "",
         duration: song.duration || "", 
         description: song.description || "", 
+        lyrics: (song as any).lyrics || "", // Load lyrics từ song object
         genre: genreName, 
         status: song.status, 
         albumId: song.albumId || "",
@@ -944,6 +952,8 @@ const ArtistDashboard = () => {
                             </div>
                             <div><label className="text-gray-400 text-sm mb-1 block">Loại bài hát</label><select value={songForm.type} onChange={(e) => setSongForm({...songForm, type: e.target.value as "FREE" | "PREMIUM"})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#3BC8E7]"><option value="FREE">Miễn phí</option><option value="PREMIUM">Premium</option></select></div>
                             <div><label className="text-gray-400 text-sm mb-1 block">Thuộc Album</label><select value={songForm.albumId || ""} onChange={(e) => setSongForm({...songForm, albumId: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#3BC8E7]"><option value="">-- Single --</option>{albums.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}</select></div>
+                            <div><label className="text-gray-400 text-sm mb-1 block">Mô tả bài hát</label><textarea rows={3} value={songForm.description} onChange={(e) => setSongForm({...songForm, description: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#3BC8E7]" placeholder="Viết mô tả về bài hát này..." /></div>
+                            <div><label className="text-gray-400 text-sm mb-1 block">Lời bài hát</label><textarea rows={8} value={songForm.lyrics} onChange={(e) => setSongForm({...songForm, lyrics: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#3BC8E7] font-mono text-sm" placeholder="Nhập lời bài hát... (Mỗi dòng một câu)" /></div>
                         </>
                     )}
 
@@ -1077,7 +1087,7 @@ const ArtistDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard": return <div className="space-y-6 animate-in fade-in duration-500"><h2 className="text-3xl font-bold text-white mb-6">Tổng quan</h2><div className="grid grid-cols-1 md:grid-cols-4 gap-6">{stats.map((stat, i) => (<div key={i} className="bg-[#1E2542] p-6 rounded-2xl shadow-lg border border-gray-700"><div className="flex items-center justify-between mb-4"><div className={`p-3 rounded-full bg-opacity-20 ${stat.color.replace('text', 'bg')} ${stat.color}`}>{stat.icon}</div></div><h3 className="text-3xl font-bold text-white mb-1">{stat.value}</h3><p className="text-gray-400 text-sm">{stat.label}</p></div>))}</div></div>;
-      case "songs": return <div className="animate-in fade-in duration-500 pb-24"><div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold text-white">Thư viện nhạc ({songs.length})</h2><button onClick={() => { setSongForm({ title: "", artist: "", description: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", type: "FREE", file: null, fileName: "", coverFile: null, coverPreview: "" }); setActiveTab("upload"); }} className="bg-[#3BC8E7] text-black px-4 py-2 rounded-full font-bold hover:bg-[#34b3ce] transition flex items-center gap-2"><Plus size={18} /> Đăng bài mới</button></div><div className="bg-[#1E2542] rounded-2xl overflow-hidden border border-gray-700"><table className="w-full text-left text-gray-300"><thead className="bg-[#151a30] text-gray-400 uppercase text-xs"><tr><th className="p-4">Tên bài hát</th><th className="p-4">Thể loại</th><th className="p-4">Album</th><th className="p-4">Trạng thái</th><th className="p-4 text-center">Hành động</th></tr></thead><tbody>{songs.map((song) => { const album = albums.find(a => String(a.id) === String(song.albumId)); const songGenre = genres.find(g => g.id === song.genreId); const hasAudio = song.audioUrl || song.fileUrl; const isPremium = song.type === 'PREMIUM'; return (<tr key={song.id} className="border-b border-gray-700 hover:bg-[#252d4d] transition"><td className="p-4 font-medium text-white flex items-center gap-3"><div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800 relative">{song.coverImage || song.cover ? <img src={song.coverImage || song.cover} alt={song.title} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">♫</div>}{isPremium && <div className="absolute top-0 right-0 bg-gradient-to-br from-yellow-400 to-yellow-600 p-1 rounded-bl-lg"><Gem size={12} className="text-white" fill="currentColor" /></div>}</div><div className="flex items-center gap-3 flex-1"><div><div className="flex items-center gap-2">{song.title}{isPremium && <span className="text-xs text-yellow-400">Premium</span>}</div><div className="text-xs text-gray-500">{song.artist || "Nghệ sĩ"}</div></div>{hasAudio && <button onClick={(e) => { e.stopPropagation(); handlePlaySong(song); }} className="w-8 h-8 rounded-full bg-[#3BC8E7]/20 hover:bg-[#3BC8E7]/30 flex items-center justify-center text-[#3BC8E7] transition hover:scale-110" title="Phát nhạc"><Play size={16} fill="currentColor" /></button>}</div></td><td className="p-4 text-sm text-gray-400">{songGenre ? <span className="px-2 py-1 rounded bg-[#3BC8E7]/20 text-[#3BC8E7]">{songGenre.genreName}</span> : <span className="text-gray-600 italic">-</span>}</td><td className="p-4 text-sm text-gray-400">{album ? <span className="flex items-center gap-1 text-[#3BC8E7]"><Disc size={14}/> {album.title}</span> : <span className="text-gray-600 italic">Single</span>}</td><td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${song.status === 'Public' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{song.status}</span></td><td className="p-4 flex justify-center gap-3"><button onClick={() => openEditSong(song)} className="text-gray-400 hover:text-[#3BC8E7]"><Edit size={18} /></button><button onClick={() => handleDeleteItem('songs', song.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button></td></tr>); })}</tbody></table></div></div>;
+      case "songs": return <div className="animate-in fade-in duration-500 pb-24"><div className="flex justify-between items-center mb-6"><h2 className="text-3xl font-bold text-white">Thư viện nhạc ({songs.length})</h2><button onClick={() => { setSongForm({ title: "", artist: "", description: "", lyrics: "", genre: genres.length > 0 ? genres[0].genreName : "Pop", status: "Public", albumId: "", duration: "", type: "FREE", file: null, fileName: "", coverFile: null, coverPreview: "" }); setActiveTab("upload"); }} className="bg-[#3BC8E7] text-black px-4 py-2 rounded-full font-bold hover:bg-[#34b3ce] transition flex items-center gap-2"><Plus size={18} /> Đăng bài mới</button></div><div className="bg-[#1E2542] rounded-2xl overflow-hidden border border-gray-700"><table className="w-full text-left text-gray-300"><thead className="bg-[#151a30] text-gray-400 uppercase text-xs"><tr><th className="p-4">Tên bài hát</th><th className="p-4">Thể loại</th><th className="p-4">Album</th><th className="p-4">Trạng thái</th><th className="p-4 text-center">Hành động</th></tr></thead><tbody>{songs.map((song) => { const album = albums.find(a => String(a.id) === String(song.albumId)); const songGenre = genres.find(g => g.id === song.genreId); const hasAudio = song.audioUrl || song.fileUrl; const isPremium = song.type === 'PREMIUM'; return (<tr key={song.id} className="border-b border-gray-700 hover:bg-[#252d4d] transition"><td className="p-4 font-medium text-white flex items-center gap-3"><div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800 relative">{song.coverImage || song.cover ? <img src={song.coverImage || song.cover} alt={song.title} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">♫</div>}{isPremium && <div className="absolute top-0 right-0 bg-gradient-to-br from-yellow-400 to-yellow-600 p-1 rounded-bl-lg"><Gem size={12} className="text-white" fill="currentColor" /></div>}</div><div className="flex items-center gap-3 flex-1"><div><div className="flex items-center gap-2">{song.title}{isPremium && <span className="text-xs text-yellow-400">Premium</span>}</div><div className="text-xs text-gray-500">{song.artist || "Nghệ sĩ"}</div></div>{hasAudio && <button onClick={(e) => { e.stopPropagation(); handlePlaySong(song); }} className="w-8 h-8 rounded-full bg-[#3BC8E7]/20 hover:bg-[#3BC8E7]/30 flex items-center justify-center text-[#3BC8E7] transition hover:scale-110" title="Phát nhạc"><Play size={16} fill="currentColor" /></button>}</div></td><td className="p-4 text-sm text-gray-400">{songGenre ? <span className="px-2 py-1 rounded bg-[#3BC8E7]/20 text-[#3BC8E7]">{songGenre.genreName}</span> : <span className="text-gray-600 italic">-</span>}</td><td className="p-4 text-sm text-gray-400">{album ? <span className="flex items-center gap-1 text-[#3BC8E7]"><Disc size={14}/> {album.title}</span> : <span className="text-gray-600 italic">Single</span>}</td><td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${song.status === 'Public' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{song.status}</span></td><td className="p-4 flex justify-center gap-3"><button onClick={() => openEditSong(song)} className="text-gray-400 hover:text-[#3BC8E7]"><Edit size={18} /></button><button onClick={() => handleDeleteItem('songs', song.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button></td></tr>); })}</tbody></table></div></div>;
       
       // --- TAB UPLOAD ---
       case "upload": return (
@@ -1129,6 +1139,11 @@ const ArtistDashboard = () => {
                     <div>
                         <label className="text-gray-400 text-sm mb-1 block">Mô tả bài hát</label>
                         <textarea rows={3} value={songForm.description} onChange={(e) => setSongForm({...songForm, description: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-[#3BC8E7]" placeholder="Viết mô tả về bài hát này, lời tựa, cảm hứng sáng tác..." />
+                    </div>
+
+                    <div>
+                        <label className="text-gray-400 text-sm mb-1 block">Lời bài hát</label>
+                        <textarea rows={8} value={songForm.lyrics} onChange={(e) => setSongForm({...songForm, lyrics: e.target.value})} className="w-full bg-[#151a30] text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-[#3BC8E7] font-mono text-sm" placeholder="Nhập lời bài hát... (Mỗi dòng một câu)" />
                     </div>
 
                     <div className="flex items-center gap-4 bg-[#151a30] p-4 rounded-lg border border-gray-700">

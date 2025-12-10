@@ -23,6 +23,14 @@ export class CreateSongDto {
   fileUrl!: string; // Bắt buộc vì phải upload file
 
   @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  lyrics?: string;
+
+  @IsOptional()
   @IsEnum(["FREE", "PREMIUM"])
   type?: "FREE" | "PREMIUM";
 }

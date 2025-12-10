@@ -66,6 +66,7 @@ const CommentManagementTab: React.FC<CommentManagementTabProps> = () => {
       setComments(commentsData);
     } catch (error) {
       console.error('Error loading comments:', error);
+      alert('Không thể tải bình luận. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }

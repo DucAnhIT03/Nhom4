@@ -18,6 +18,7 @@ import { canPlayPremiumSong, isSongOwner } from "../utils/premiumCheck";
 import CustomAudioPlayer from "../shared/components/CustomAudioPlayer";
 import CommentModal from "../components/Comments/CommentModal";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useMusic } from "../contexts/MusicContext";
 
 // Định nghĩa kiểu dữ liệu form tĩnh
 interface Song {
@@ -45,6 +46,7 @@ const AlbumDetail = () => {
   const { id } = useParams(); 
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { currentlyPlayingSong } = useMusic();
   
   // State lưu trữ dữ liệu album
   const [album, setAlbum] = useState<AlbumDetail | null>(null);
@@ -107,6 +109,15 @@ const AlbumDetail = () => {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
+      // Dừng tất cả audio khác trước khi phát nhạc nền
+      const allAudios = document.querySelectorAll('audio');
+      allAudios.forEach((otherAudio) => {
+        if (otherAudio !== audioRef.current && !otherAudio.paused) {
+          otherAudio.pause();
+          otherAudio.currentTime = 0;
+        }
+      });
+      
       // Phát nhạc
       audioRef.current.play().catch((error) => {
         console.error("Lỗi phát nhạc:", error);
@@ -220,6 +231,14 @@ const AlbumDetail = () => {
       setIsPlaying(false);
     }
   }, [backgroundMusicUrl]);
+
+  // Dừng nhạc nền khi có bài hát khác được phát từ MusicContext
+  useEffect(() => {
+    if (currentlyPlayingSong && audioRef.current && isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  }, [currentlyPlayingSong]);
 
   // Cleanup khi component unmount
   useEffect(() => {
@@ -405,14 +424,13 @@ const AlbumDetail = () => {
 
         {/* SONG LIST */}
         <div className="mt-10 pb-20">
-          <div className="grid grid-cols-[50px_2fr_1fr_80px_80px_420px] border-b border-[#252B4D] pb-2 text-gray-400 text-sm uppercase px-4 py-3">
+          <div className="grid grid-cols-[50px_2fr_1fr_120px_420px] border-b border-[#252B4D] pb-2 text-gray-400 text-sm uppercase px-4 py-3">
             <span className="text-center flex items-center justify-center">
               <FaHeart className="text-sm" />
             </span>
             <span>{t('common.songTitle')}</span>
             <span>{t('common.artists')}</span>
-            <span className="text-center">{t('common.comment')}</span>
-            <span className="text-center">{t('downloads.title')}</span>
+            <span className="text-center">{t('common.comment')} và {t('downloads.title')}</span>
             <span className="text-center">{t('common.play')}</span>
           </div>
 
@@ -424,7 +442,7 @@ const AlbumDetail = () => {
                     return (
                     <div 
                         key={song.id} 
-                        className="group grid grid-cols-[50px_2fr_1fr_80px_80px_420px] items-center px-4 py-3 rounded-md hover:bg-[#252B4D] transition cursor-pointer border-b border-transparent hover:border-[#3BC8E7]/20"
+                        className="group grid grid-cols-[50px_2fr_1fr_120px_420px] items-center px-4 py-3 rounded-md hover:bg-[#252B4D] transition cursor-pointer border-b border-transparent hover:border-[#3BC8E7]/20"
                     >
                         <div className="text-center flex justify-center items-center" onClick={(e) => { e.stopPropagation(); toggleLike(song.id); }}>
                             {isLiked ? (
@@ -433,32 +451,15 @@ const AlbumDetail = () => {
                                 <FaRegHeart className="text-gray-400 hover:text-[#3BC8E7] transition cursor-pointer" />
                             )}
                         </div>
-                        <div className="flex items-center justify-center">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(song);
-                            }}
-                            disabled={downloading.has(song.id)}
-                            className="text-2xl transition-colors hover:scale-110 disabled:opacity-50"
-                            title={
-                              isDownloaded
-                                ? t('downloads.downloaded') || 'Đã tải'
-                                : song.type === 'PREMIUM'
-                                  ? t('downloads.viewMore') || 'Premium required'
-                                  : t('downloads.title')
-                            }
-                          >
-                            {isDownloaded ? (
-                              <IoCheckmarkDoneSharp className="text-[#3BC8E7]" />
-                            ) : (
-                              <IoCloudDownloadOutline className="text-gray-300 hover:text-white" />
-                            )}
-                          </button>
-                        </div>
                         <div className="flex flex-col pr-4">
                             <div className="flex items-center gap-2">
-                                <span className="font-medium text-base text-white">
+                                <span 
+                                    className="font-medium text-base text-white hover:text-[#3BC8E7] transition cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/song/${song.id}`);
+                                    }}
+                                >
                                     {song.title}
                                 </span>
                                 {song.type === 'PREMIUM' && (
@@ -471,7 +472,7 @@ const AlbumDetail = () => {
                         <div className="text-gray-400 text-sm hover:text-white transition">
                             {String(song.artist || t('common.unknown'))}
                         </div>
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center gap-3">
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -485,6 +486,27 @@ const AlbumDetail = () => {
                                 title={t('common.comment')}
                             >
                                 <FaComment />
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownload(song);
+                                }}
+                                disabled={downloading.has(song.id)}
+                                className="text-xl transition-colors hover:scale-110 disabled:opacity-50"
+                                title={
+                                    isDownloaded
+                                        ? t('downloads.downloaded') || 'Đã tải'
+                                        : song.type === 'PREMIUM'
+                                          ? t('downloads.viewMore') || 'Premium required'
+                                          : t('downloads.title')
+                                }
+                            >
+                                {isDownloaded ? (
+                                    <IoCheckmarkDoneSharp className="text-[#3BC8E7]" />
+                                ) : (
+                                    <IoCloudDownloadOutline className="text-gray-300 hover:text-white" />
+                                )}
                             </button>
                         </div>
                         <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>

@@ -9,6 +9,7 @@ import {
   Image,
   CreditCard,
   Mail,
+  MessageSquare,
   LogOut
 } from 'lucide-react';
 import './Sidebar.css';
@@ -24,6 +25,7 @@ const Sidebar = () => {
     { icon: Image, label: 'Quản lý banner', path: '/dashboard/banners', hasArrow: true },
     { icon: CreditCard, label: 'Quản lý giá Premium', path: '/dashboard/subscription-plans', hasArrow: true },
     { icon: Mail, label: 'Quản lý Mail', path: '/dashboard/mail', hasArrow: true },
+    { icon: MessageSquare, label: 'Quản lý bình luận', path: '/dashboard/comments', hasArrow: true },
   ];
 
   const handleLogout = () => {

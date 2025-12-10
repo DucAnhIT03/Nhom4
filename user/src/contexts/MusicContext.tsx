@@ -40,9 +40,19 @@ export const MusicProvider = ({ children }: { children: ReactNode }) => {
   const originalQueueRef = useRef<Song[]>([]);
   const audioElementsRef = useRef<Set<HTMLAudioElement>>(new Set());
 
-  // Dừng tất cả audio elements đang phát
+  // Dừng tất cả audio elements đang phát (bao gồm cả các audio không đăng ký)
   const stopAllAudio = (except?: HTMLAudioElement) => {
+    // Dừng tất cả audio đã đăng ký
     audioElementsRef.current.forEach((audio) => {
+      if (audio && audio !== except && !audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+    
+    // Dừng TẤT CẢ audio elements trong document để đảm bảo không có audio nào khác phát
+    const allAudios = document.querySelectorAll('audio');
+    allAudios.forEach((audio) => {
       if (audio && audio !== except && !audio.paused) {
         audio.pause();
         audio.currentTime = 0;

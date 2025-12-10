@@ -21,13 +21,17 @@ const TopTrack = lazy(() => import("./pages/Toptracks.tsx"));
 
 // 3. Album Pages
 const AlbumList = lazy(() => import("./pages/Album.tsx"));       
-const AlbumDetail = lazy(() => import("./pages/AlbumDetail.tsx")); 
+const AlbumDetail = lazy(() => import("./pages/AlbumDetail.tsx"));
+
+// 4. Song Detail Page
+const SongDetail = lazy(() => import("./pages/SongDetail.tsx")); 
 
 // 4. User Personal Pages (Cá nhân)
 const Favourites = lazy(() => import("./pages/Favourites.tsx"));
 const History = lazy(() => import("./pages/History.tsx"));
 const Downloads = lazy(() => import("./pages/Downloads.tsx"));
 const Playlist = lazy(() => import("./pages/Playlist.tsx"));
+const MyComments = lazy(() => import("./pages/MyComments.tsx"));
 
 // 5. ARTIST PAGES (MỚI THÊM)
 // Đây là trang đích sau khi đăng nhập với role Artist
@@ -80,6 +84,12 @@ const router = createBrowserRouter([
         element: <AlbumDetail />, 
       },
 
+      // --- Song Detail Route ---
+      {
+        path: "song/:id",
+        element: <SongDetail />,
+      },
+
       // --- Personal Routes ---
       {
         path: "favorite",
@@ -96,6 +106,10 @@ const router = createBrowserRouter([
       {
         path: "playlist",
         element: <Playlist />,
+      },
+      {
+        path: "my-comments",
+        element: <MyComments />,
       },
 
       // === ARTIST ROUTES (MỚI THÊM) ===

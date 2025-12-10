@@ -288,7 +288,13 @@ const GenrePage: React.FC = () => {
                     </div>
                     <div className="flex flex-col pr-4">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-base text-white">
+                        <span 
+                          className="font-medium text-base text-white hover:text-[#3BC8E7] transition cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/song/${song.id}`);
+                          }}
+                        >
                           {song.title}
                         </span>
                         {song.type === 'PREMIUM' && (

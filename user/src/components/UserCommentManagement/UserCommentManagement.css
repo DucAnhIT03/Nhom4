@@ -1,0 +1,257 @@
+.user-comment-management {
+  padding: 24px;
+  color: #ffffff;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.comment-header {
+  margin-bottom: 24px;
+}
+
+.comment-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+}
+
+.comment-subtitle {
+  font-size: 14px;
+  color: #a0aec0;
+  margin: 0;
+}
+
+.comment-search-box {
+  position: relative;
+  margin-bottom: 24px;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #718096;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #3BC8E7;
+  box-shadow: 0 0 0 3px rgba(59, 200, 231, 0.1);
+}
+
+.search-input::placeholder {
+  color: #718096;
+}
+
+.comment-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-label {
+  color: #a0aec0;
+  font-size: 14px;
+}
+
+.stat-value {
+  color: #3BC8E7;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading,
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #a0aec0;
+}
+
+.empty-icon {
+  margin: 0 auto 16px;
+  opacity: 0.5;
+}
+
+.comment-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.comment-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(59, 200, 231, 0.3);
+}
+
+.comment-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comment-header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.comment-song-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+}
+
+.song-icon {
+  color: #3BC8E7;
+}
+
+.song-title {
+  font-weight: 600;
+  color: #3BC8E7;
+}
+
+.comment-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+.comment-content {
+  color: #e2e8f0;
+  line-height: 1.6;
+  font-size: 14px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.comment-type-badge {
+  align-self: flex-start;
+}
+
+.comment-type-badge span {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(252, 129, 129, 0.1);
+  border: 1px solid rgba(252, 129, 129, 0.3);
+  border-radius: 6px;
+  color: #fc8181;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.delete-btn:hover {
+  background: rgba(252, 129, 129, 0.2);
+  border-color: #fc8181;
+  color: #f56565;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #3BC8E7;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  color: #a0aec0;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .user-comment-management {
+    padding: 16px;
+  }
+
+  .comment-header-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .comment-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+

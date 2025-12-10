@@ -10,6 +10,7 @@ import AlbumManagementPage from '../features/albums/pages/AlbumManagementPage';
 import BannerManagementPage from '../features/banners/pages/BannerManagementPage';
 import SubscriptionPlanManagementPage from '../features/subscription-plans/pages/SubscriptionPlanManagementPage';
 import MailManagementPage from '../features/mail/pages/MailManagementPage';
+import CommentManagementPage from '../features/comments/pages/CommentManagementPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -72,6 +73,10 @@ const router = createBrowserRouter([
       {
         path: 'mail',
         element: <MailManagementPage />,
+      },
+      {
+        path: 'comments',
+        element: <CommentManagementPage />,
       },
     ],
   },
