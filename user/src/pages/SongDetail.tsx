@@ -76,6 +76,14 @@ const SongDetail = () => {
           throw new Error("Song not found");
         }
 
+        // Debug: Log để kiểm tra lyrics từ API
+        console.log('[SongDetail] Song data:', songData);
+        console.log('[SongDetail] Lyrics:', songData.lyrics);
+        console.log('[SongDetail] Lyrics type:', typeof songData.lyrics);
+        console.log('[SongDetail] Lyrics value:', songData.lyrics);
+        console.log('[SongDetail] Has lyrics?', !!songData.lyrics);
+        console.log('[SongDetail] Lyrics trimmed?', songData.lyrics?.trim());
+
         setSong(songData);
         
         // Load artist info
@@ -358,7 +366,7 @@ const SongDetail = () => {
             </div>
 
             {/* Lyrics Section */}
-            {song.lyrics ? (
+            {song.lyrics && song.lyrics.trim() ? (
               <div className="mt-8">
                 <h2 className="text-2xl font-bold text-white mb-4">Lời bài hát</h2>
                 <div className="bg-[#1E2542] rounded-lg p-6 border border-gray-700">
@@ -370,7 +378,7 @@ const SongDetail = () => {
                   </div>
                 </div>
               </div>
-            ) : song.description ? (
+            ) : song.description && song.description.trim() ? (
               <div className="mt-8">
                 <h2 className="text-2xl font-bold text-white mb-4">{t('common.description')}</h2>
                 <div className="bg-[#1E2542] rounded-lg p-6 border border-gray-700">

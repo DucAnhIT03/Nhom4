@@ -97,6 +97,37 @@ export interface TrendingSong {
   playCount: number;
 }
 
+export const searchSongs = async (query: string, limit?: number): Promise<Song[]> => {
+  try {
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
+    
+    // Encode query để xử lý đúng tiếng Việt có dấu
+    const encodedQuery = encodeURIComponent(query.trim());
+    const params: any = { q: encodedQuery };
+    if (limit) {
+      params.limit = limit;
+    }
+    
+    console.log(`[Frontend] Searching songs with query: "${query.trim()}", encoded: "${encodedQuery}", params:`, params);
+    const response = await axios.get<Song[]>(`${API_BASE_URL}/songs/search`, { 
+      params,
+      paramsSerializer: {
+        indexes: null // Không thêm [] vào array indices
+      }
+    });
+    console.log(`[Frontend] Search results:`, response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('Error searching songs:', error);
+    console.error('Error response:', error.response?.data);
+    console.error('Error status:', error.response?.status);
+    console.error('Error config:', error.config);
+    return [];
+  }
+};
+
 export const getWeeklyTopTracks = async (limit?: number): Promise<TrendingSong[]> => {
   try {
     const params = limit ? { limit } : {};

@@ -245,7 +245,12 @@ const CommentManagementPage = () => {
                               )}
                             </div>
                             <div className="user-details">
-                              <div className="user-name">{getUserName(comment)}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="user-name">{getUserName(comment)}</span>
+                                {comment.user?.isArtist && (
+                                  <span className="text-xs text-[#3BC8E7] font-medium">• Nghệ sĩ</span>
+                                )}
+                              </div>
                               <div className="comment-date-info">
                                 <Clock size={12} />
                                 <span>{formatDate(comment.createdAt)}</span>
@@ -284,7 +289,12 @@ const CommentManagementPage = () => {
                                         )}
                                       </div>
                                       <div className="reply-user-info">
-                                        <span className="reply-user-name">{getUserName(reply)}</span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="reply-user-name">{getUserName(reply)}</span>
+                                          {reply.user?.isArtist && (
+                                            <span className="text-xs text-[#3BC8E7] font-medium">• Nghệ sĩ</span>
+                                          )}
+                                        </div>
                                         <span className="reply-date">{formatDate(reply.createdAt)}</span>
                                       </div>
                                     </div>

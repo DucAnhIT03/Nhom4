@@ -16,6 +16,7 @@ export interface Comment {
     lastName: string;
     email: string;
     profileImage?: string;
+    isArtist?: boolean;
   };
   song?: {
     id: number;

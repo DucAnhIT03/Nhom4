@@ -335,6 +335,21 @@ const Container = () => {
                         className="w-full"
                         songType={item.song.type}
                         songArtistId={item.song.artistId}
+                        songId={item.song.id}
+                        songTitle={item.song.title}
+                        songArtist={item.song.artist?.artistName || "Unknown Artist"}
+                        songImage={(item.song as any).coverImage || './slide/Song1.jpg'}
+                        allSongs={songs
+                          .filter(s => s.song.fileUrl) // Chỉ lấy bài hát có fileUrl
+                          .map(s => ({
+                            id: s.song.id,
+                            title: s.song.title,
+                            artist: s.song.artist?.artistName || "Unknown Artist",
+                            fileUrl: s.song.fileUrl!,
+                            coverImage: (s.song as any).coverImage,
+                            type: s.song.type,
+                            artistId: s.song.artistId,
+                          }))}
                         onPlay={async () => {
                           try {
                             await incrementSongViews(item.song.id);

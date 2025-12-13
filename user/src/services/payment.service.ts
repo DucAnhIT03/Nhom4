@@ -61,6 +61,14 @@ export interface CreatePaymentDto {
   transactionId?: string;
 }
 
+export interface SubscriptionPlan {
+  id: number;
+  planName: string;
+  price: number;
+  durationDay: number;
+  description?: string;
+}
+
 export interface Payment {
   id: number;
   userId: number;
@@ -72,6 +80,7 @@ export interface Payment {
   paymentDate: string;
   createdAt: string;
   updatedAt: string;
+  plan?: SubscriptionPlan | null;
 }
 
 export const createPayment = async (data: CreatePaymentDto) => {

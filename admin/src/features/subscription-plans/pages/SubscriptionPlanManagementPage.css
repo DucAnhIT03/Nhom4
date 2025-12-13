@@ -97,7 +97,8 @@
 
 .subscription-plans-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .subscription-plans-table thead {
@@ -112,13 +113,24 @@
   color: #3BC8E7;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   vertical-align: middle;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.subscription-plans-table th.text-center,
+.subscription-plans-table td.text-center {
+  text-align: center !important;
+}
+
+.subscription-plans-table th.text-right,
+.subscription-plans-table td.text-right {
+  text-align: right !important;
 }
 
 .subscription-plans-table th:nth-child(1),
 .subscription-plans-table td:nth-child(1) {
   width: 80px;
   min-width: 80px;
-  text-align: center;
 }
 
 .subscription-plans-table td {
@@ -129,6 +141,12 @@
   vertical-align: middle;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.subscription-plans-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .subscription-plans-table tbody tr:hover {

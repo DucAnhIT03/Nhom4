@@ -140,10 +140,10 @@ const SubscriptionPlanManagementPage = () => {
           <table className="subscription-plans-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th className="text-center">ID</th>
                 <th>Tên gói</th>
                 <th>Thời hạn</th>
-                <th>Giá (VNĐ)</th>
+                <th className="text-right">Giá (VNĐ)</th>
                 <th>Mô tả</th>
                 <th>Thao tác</th>
               </tr>
@@ -158,14 +158,14 @@ const SubscriptionPlanManagementPage = () => {
               ) : (
                 filteredPlans.map((plan) => (
                   <tr key={plan.id}>
-                    <td>{plan.id}</td>
+                    <td className="text-center">{plan.id}</td>
                     <td>
                       <span className="plan-name">{plan.planName}</span>
                     </td>
                     <td>
                       <span className="duration-badge">{getDurationLabel(plan.durationDay)}</span>
                     </td>
-                    <td>
+                    <td className="text-right">
                       <span className="price-value">{formatPrice(plan.price)} VNĐ</span>
                     </td>
                     <td>

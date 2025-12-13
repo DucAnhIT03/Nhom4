@@ -46,7 +46,7 @@ export class PaymentService {
       });
 
       if (existingSub) {
-        existingSub.plan = SubscriptionPlanType.PRENIUM;
+        existingSub.plan = SubscriptionPlanType.PREMIUM;
         existingSub.startTime = now;
         existingSub.endTime = end;
         existingSub.status = SubscriptionStatus.ACTIVE;
@@ -54,7 +54,7 @@ export class PaymentService {
       } else {
         const subscription = this.subscriptionRepository.create({
           userId: dto.userId,
-          plan: SubscriptionPlanType.PRENIUM,
+          plan: SubscriptionPlanType.PREMIUM,
           startTime: now,
           endTime: end,
           status: SubscriptionStatus.ACTIVE,
@@ -99,7 +99,7 @@ export class PaymentService {
     });
 
     if (existingSub) {
-      existingSub.plan = SubscriptionPlanType.PRENIUM;
+      existingSub.plan = SubscriptionPlanType.PREMIUM;
       existingSub.startTime = now;
       existingSub.endTime = end;
       existingSub.status = SubscriptionStatus.ACTIVE;
@@ -107,7 +107,7 @@ export class PaymentService {
     } else {
       const subscription = this.subscriptionRepository.create({
         userId: payment.userId,
-        plan: SubscriptionPlanType.PRENIUM,
+        plan: SubscriptionPlanType.PREMIUM,
         startTime: now,
         endTime: end,
         status: SubscriptionStatus.ACTIVE,
@@ -118,11 +118,30 @@ export class PaymentService {
     return payment;
   }
 
-  findByUser(userId: number): Promise<Payment[]> {
-    return this.paymentRepository.find({
+  async findByUser(userId: number): Promise<any[]> {
+    const payments = await this.paymentRepository.find({
       where: { userId },
       order: { paymentDate: "DESC" },
     });
+
+    // Load thông tin plan cho mỗi payment
+    const paymentsWithPlan = await Promise.all(
+      payments.map(async (payment) => {
+        const plan = await this.planRepository.findOne({ where: { id: payment.planId } });
+        return {
+          ...payment,
+          plan: plan ? {
+            id: plan.id,
+            planName: plan.planName,
+            price: plan.price,
+            durationDay: plan.durationDay,
+            description: plan.description,
+          } : null,
+        };
+      })
+    );
+
+    return paymentsWithPlan;
   }
 
   async findAllForAdmin(

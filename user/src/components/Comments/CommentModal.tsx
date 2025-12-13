@@ -253,6 +253,9 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-semibold text-white">{getUserName(comment)}</span>
+                      {comment.user?.isArtist && (
+                        <span className="text-xs text-[#3BC8E7] font-medium">• Nghệ sĩ</span>
+                      )}
                       <span className="text-xs text-gray-400">{formatDate(comment.createdAt)}</span>
                     </div>
                     {editingId === comment.id ? (
@@ -371,6 +374,9 @@ const CommentModal = ({ isOpen, onClose, songId, songTitle }: CommentModalProps)
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     <span className="font-semibold text-white text-sm">{getUserName(reply)}</span>
+                                    {reply.user?.isArtist && (
+                                      <span className="text-xs text-[#3BC8E7] font-medium">• Nghệ sĩ</span>
+                                    )}
                                     <span className="text-xs text-gray-400">{formatDate(reply.createdAt)}</span>
                                   </div>
                                   <p className="text-gray-300 text-sm mb-2">{reply.content}</p>

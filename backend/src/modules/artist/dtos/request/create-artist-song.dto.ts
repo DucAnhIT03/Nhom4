@@ -29,6 +29,14 @@ export class CreateArtistSongDto {
   coverImage?: string;
 
   @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  lyrics?: string;
+
+  @IsOptional()
   @IsEnum(["FREE", "PREMIUM"])
   type?: "FREE" | "PREMIUM";
 }

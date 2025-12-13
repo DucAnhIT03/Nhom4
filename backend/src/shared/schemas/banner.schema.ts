@@ -16,7 +16,7 @@ export class Banner {
   @Column({ name: "image_url", length: 255, nullable: false })
   imageUrl!: string;
 
-  @Column({ type: "text", nullable: true })
+  @Column({ type: "longtext", nullable: true })
   content?: string;
 
   @Column({ name: "song_id", type: "int", nullable: true })

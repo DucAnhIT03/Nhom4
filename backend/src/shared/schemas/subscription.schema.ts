@@ -2,8 +2,8 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateCol
 
 export enum SubscriptionPlanType {
   FREE = "FREE",
-  PRENIUM = "PRENIUM",
-  AIRTIST = "AIRTIST",
+  PREMIUM = "PREMIUM",
+  ARTIST = "ARTIST",
 }
 
 export enum SubscriptionStatus {

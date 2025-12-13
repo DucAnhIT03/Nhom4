@@ -25,6 +25,7 @@ interface Song {
   fileUrl?: string;
   type?: 'FREE' | 'PREMIUM';
   artistId?: number;
+  coverImage?: string;
 }
 
 const GenrePage: React.FC = () => {
@@ -66,6 +67,7 @@ const GenrePage: React.FC = () => {
       fileUrl: song.fileUrl,
       type: song.type,
       artistId: song.artistId,
+      coverImage: song.coverImage,
     };
   };
 
@@ -330,6 +332,19 @@ const GenrePage: React.FC = () => {
                           className="w-full max-w-[400px]"
                           songType={song.type}
                           songArtistId={song.artistId}
+                          songId={song.id}
+                          songTitle={song.title}
+                          songArtist={song.artist}
+                          songImage={song.coverImage || './slide/Song1.jpg'}
+                          allSongs={songs.map(s => ({
+                            id: s.id,
+                            title: s.title,
+                            artist: s.artist,
+                            fileUrl: s.fileUrl,
+                            coverImage: s.coverImage,
+                            type: s.type,
+                            artistId: s.artistId,
+                          }))}
                           onPlay={async () => {
                             try {
                               await incrementSongViews(song.id);

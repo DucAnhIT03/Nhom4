@@ -121,7 +121,7 @@ const BannerManagementPage = () => {
           <table className="banners-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th className="text-center">ID</th>
                 <th>Ảnh</th>
                 <th>Tiêu đề</th>
                 <th>Bài hát</th>
@@ -140,7 +140,7 @@ const BannerManagementPage = () => {
               ) : (
                 filteredBanners.map((banner) => (
                   <tr key={banner.id}>
-                    <td>{banner.id}</td>
+                    <td className="text-center">{banner.id}</td>
                     <td>
                       {banner.imageUrl ? (
                         <img

@@ -256,7 +256,7 @@ CREATE TABLE IF NOT EXISTS subscription_plan (
 CREATE TABLE IF NOT EXISTS subscriptions (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  plan ENUM('FREE','PRENIUM','AIRTIST') NOT NULL,
+  plan ENUM('FREE','PREMIUM','ARTIST') NOT NULL,
   start_time DATETIME NULL,
   end_time DATETIME NULL,
   status ENUM('ACTIVE','EXPIRED','CANCELLED') NOT NULL,
@@ -320,6 +320,7 @@ CREATE TABLE IF NOT EXISTS banners (
 -- Migration: Thêm column description và lyrics vào bảng songs
 -- Đã được thêm vào CREATE TABLE ở trên, nhưng nếu database đã tồn tại,
 -- chạy file migration_add_song_description_lyrics.sql để thêm các columns này
+-- File migration sẽ tự động kiểm tra và chỉ thêm column nếu chưa tồn tại
 -- ============================================================
 
 -- ============================================================

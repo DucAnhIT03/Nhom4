@@ -97,7 +97,8 @@
 
 .banners-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .banners-table thead {
@@ -112,6 +113,18 @@
   color: #3BC8E7;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   vertical-align: middle;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.banners-table th.text-center,
+.banners-table td.text-center {
+  text-align: center !important;
+}
+
+.banners-table th.text-right,
+.banners-table td.text-right {
+  text-align: right !important;
 }
 
 .banners-table tbody tr {
@@ -130,6 +143,13 @@
   vertical-align: middle;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: left;
+}
+
+.banners-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .empty-state {

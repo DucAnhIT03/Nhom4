@@ -516,6 +516,19 @@ const AlbumDetail = () => {
                                     className="w-full max-w-[400px]"
                                     songType={song.type}
                                     songArtistId={song.artistId}
+                                    songId={song.id}
+                                    songTitle={song.title}
+                                    songArtist={song.artist}
+                                    songImage={album.img}
+                                    allSongs={album.songs.map(s => ({
+                                        id: s.id,
+                                        title: s.title,
+                                        artist: s.artist,
+                                        fileUrl: s.fileUrl,
+                                        coverImage: album.img,
+                                        type: s.type,
+                                        artistId: s.artistId,
+                                    }))}
                                     onPlay={async () => {
                                         try {
                                             await incrementSongViews(song.id);

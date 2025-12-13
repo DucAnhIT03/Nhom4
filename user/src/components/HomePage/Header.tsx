@@ -1,10 +1,12 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { FaSearch } from "react-icons/fa";
 import AuthModal from "../LoginRegister/AuthModal";
 import UserMenuDropdown from "../UserMenu/UserMenuDropdown";
 import LanguageDropdown from "../Language/LanguageDropdown";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { searchSongs } from "../../services/song.service";
+import type { Song } from "../../services/song.service";
 
 const Header: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -12,6 +14,12 @@ const Header: React.FC = () => {
   const [role, setRole] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<string>("");
   const [userName, setUserName] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Song[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -153,19 +161,165 @@ const Header: React.FC = () => {
     setUserName(null);
   };
 
+  // Xử lý tìm kiếm
+  const handleSearch = async (query: string) => {
+    if (query.trim().length === 0) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      console.log('[Header] Searching for:', query.trim());
+      const results = await searchSongs(query.trim(), 10);
+      console.log('[Header] Search results received:', results);
+      setSearchResults(results);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error('Error searching songs:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounce search khi user gõ
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    // Clear timeout cũ
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Nếu query rỗng, clear results ngay
+    if (value.trim().length === 0) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    // Debounce: đợi 500ms sau khi user ngừng gõ
+    searchTimeoutRef.current = setTimeout(() => {
+      handleSearch(value);
+    }, 500);
+  };
+
+  // Xử lý khi click vào nút search hoặc nhấn Enter
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (searchQuery.trim().length > 0) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setShowSearchResults(false);
+    }
+  };
+
+  // Đóng search results khi click bên ngoài
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    if (showSearchResults) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchResults]);
+
+  // Cleanup timeout khi unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <>
       <div className="bg-[#1B2039] h-20 ml-20 w-auto flex items-center justify-between px-6 relative z-[100]">
         {/* LEFT SIDE */}
         <div className="flex items-center">
-          <div className="flex items-center w-[260px] h-10 rounded-md overflow-hidden shadow border bg-amber-50">
-            <input
-              className="flex-1 px-3 text-sm text-gray-600"
-              placeholder={t('common.searchPlaceholder')}
-            />
-            <button className="w-[46px] h-full bg-[#25C3E7] flex items-center justify-center">
-              <FaSearch className="text-white" size={14} />
-            </button>
+          <div className="relative" ref={searchRef}>
+            <form onSubmit={handleSearchSubmit} className="flex items-center w-[260px] h-10 rounded-md overflow-hidden shadow border bg-amber-50">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchInputChange}
+                onFocus={() => {
+                  if (searchResults.length > 0) {
+                    setShowSearchResults(true);
+                  }
+                }}
+                className="flex-1 px-3 text-sm text-gray-600 outline-none"
+                placeholder={t('common.searchPlaceholder')}
+              />
+              <button 
+                type="submit"
+                className="w-[46px] h-full bg-[#25C3E7] flex items-center justify-center hover:bg-[#1fa3c2] transition-colors"
+              >
+                {isSearching ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <FaSearch className="text-white" size={14} />
+                )}
+              </button>
+            </form>
+
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 mt-2 w-[400px] bg-[#1a1a1a] rounded-lg shadow-xl border border-[#3BC8E7]/20 z-[10000] max-h-[500px] overflow-y-auto">
+                <div className="p-2">
+                  {searchResults.map((song) => (
+                    <div
+                      key={song.id}
+                      onClick={() => {
+                        navigate(`/song/${song.id}`);
+                        setShowSearchResults(false);
+                        setSearchQuery("");
+                      }}
+                      className="flex items-center gap-3 p-3 hover:bg-[#252B4D] rounded-lg cursor-pointer transition-colors"
+                    >
+                      <img
+                        src={song.coverImage || './slide/Song1.jpg'}
+                        alt={song.title}
+                        className="w-12 h-12 rounded object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = './slide/Song1.jpg';
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-semibold text-sm truncate">{song.title}</p>
+                        <p className="text-gray-400 text-xs truncate">
+                          {song.artist?.artistName || t('common.unknownArtist')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {searchResults.length >= 10 && (
+                    <button
+                      onClick={handleSearchSubmit}
+                      className="w-full mt-2 p-2 text-center text-[#3BC8E7] hover:bg-[#252B4D] rounded-lg transition-colors text-sm font-semibold"
+                    >
+                      Xem tất cả kết quả
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {showSearchResults && searchQuery.trim().length > 0 && searchResults.length === 0 && !isSearching && (
+              <div className="absolute top-full left-0 mt-2 w-[400px] bg-[#1a1a1a] rounded-lg shadow-xl border border-[#3BC8E7]/20 z-[10000] p-4">
+                <p className="text-gray-400 text-center">Không tìm thấy kết quả</p>
+              </div>
+            )}
           </div>
           <span className="text-[#3BC8E7] ml-[35px] text-[15px]">{t('common.trendingSongs')} :</span>
           <span className="text-white ml-1 text-[15px]">Dream your moments, Until I Met You, Gim</span>

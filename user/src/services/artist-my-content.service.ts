@@ -97,6 +97,9 @@ export interface CreateSongDto {
   fileUrl?: string;
   genreId?: number;
   type?: 'FREE' | 'PREMIUM';
+  description?: string;
+  lyrics?: string;
+  coverImage?: string;
 }
 
 export interface UpdateSongDto {
@@ -107,6 +110,8 @@ export interface UpdateSongDto {
   albumId?: number;
   coverImage?: string;
   type?: 'FREE' | 'PREMIUM';
+  description?: string;
+  lyrics?: string;
 }
 
 export interface MyAlbumsResponse {

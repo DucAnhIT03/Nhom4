@@ -262,7 +262,7 @@ const DashboardPage = () => {
                         <tr>
                           <th>Bài hát</th>
                           <th>Nghệ sĩ</th>
-                          <th>Lượt nghe</th>
+                          <th className="text-right">Lượt nghe</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -270,7 +270,7 @@ const DashboardPage = () => {
                           <tr key={song.id}>
                             <td>{song.title}</td>
                             <td>{song.artistName}</td>
-                            <td>{formatNumber(song.views)}</td>
+                            <td className="text-right">{formatNumber(song.views)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -286,7 +286,7 @@ const DashboardPage = () => {
                         <tr>
                           <th>Bài hát</th>
                           <th>Nghệ sĩ</th>
-                          <th>Lượt yêu thích</th>
+                          <th className="text-right">Lượt yêu thích</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -294,7 +294,7 @@ const DashboardPage = () => {
                           <tr key={song.id}>
                             <td>{song.title}</td>
                             <td>{song.artistName}</td>
-                            <td>{formatNumber(song.favoriteCount)}</td>
+                            <td className="text-right">{formatNumber(song.favoriteCount)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -326,7 +326,7 @@ const DashboardPage = () => {
                         <tr>
                           <th>Album</th>
                           <th>Nghệ sĩ</th>
-                          <th>Số bài hát</th>
+                          <th className="text-right">Số bài hát</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -334,7 +334,7 @@ const DashboardPage = () => {
                           <tr key={album.id}>
                             <td>{album.title}</td>
                             <td>{album.artistName || 'N/A'}</td>
-                            <td>{formatNumber(album.songCount)}</td>
+                            <td className="text-right">{formatNumber(album.songCount)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -365,14 +365,14 @@ const DashboardPage = () => {
                       <thead>
                         <tr>
                           <th>Nghệ sĩ</th>
-                          <th>Số album</th>
+                          <th className="text-right">Số album</th>
                         </tr>
                       </thead>
                       <tbody>
                         {artistStats.topArtistsByAlbums.slice(0, 10).map((artist) => (
                           <tr key={artist.id}>
                             <td>{artist.artistName}</td>
-                            <td>{formatNumber(artist.albumCount)}</td>
+                            <td className="text-right">{formatNumber(artist.albumCount)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -404,7 +404,7 @@ const DashboardPage = () => {
                         <tr>
                           <th>Bài hát</th>
                           <th>Nghệ sĩ</th>
-                          <th>Số bình luận</th>
+                          <th className="text-right">Số bình luận</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -412,7 +412,7 @@ const DashboardPage = () => {
                           <tr key={song.songId}>
                             <td>{song.songTitle}</td>
                             <td>{song.artistName}</td>
-                            <td>{formatNumber(song.commentCount)}</td>
+                            <td className="text-right">{formatNumber(song.commentCount)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -447,16 +447,16 @@ const DashboardPage = () => {
                       <thead>
                         <tr>
                           <th>Gói</th>
-                          <th>Số lượng</th>
-                          <th>Doanh thu</th>
+                          <th className="text-right">Số lượng</th>
+                          <th className="text-right">Doanh thu</th>
                         </tr>
                       </thead>
                       <tbody>
                         {subscriptionStats.revenueByPlan.map((revenue, idx) => (
                           <tr key={idx}>
                             <td>{revenue.plan}</td>
-                            <td>{formatNumber(revenue.count)}</td>
-                            <td>{formatNumber(revenue.revenue)} VNĐ</td>
+                            <td className="text-right">{formatNumber(revenue.count)}</td>
+                            <td className="text-right">{formatNumber(revenue.revenue)} VNĐ</td>
                           </tr>
                         ))}
                       </tbody>
@@ -476,33 +476,33 @@ const DashboardPage = () => {
                     <div className="stat-item">
                       <span className="stat-item-label">Tổng số thể loại:</span>
                       <span className="stat-item-value">{formatNumber(genreStats.totalGenres)}</span>
-          </div>
-        </div>
-      </div>
+                    </div>
+                  </div>
+                </div>
 
-        <div className="content-card">
+                <div className="content-card">
                   <h2 className="content-title">Thể loại theo số bài hát</h2>
                   <div className="table-container">
                     <table className="stats-table">
                       <thead>
                         <tr>
                           <th>Thể loại</th>
-                          <th>Số bài hát</th>
+                          <th className="text-right">Số bài hát</th>
                         </tr>
                       </thead>
                       <tbody>
                         {genreStats.genresBySongCount.slice(0, 10).map((genre) => (
                           <tr key={genre.genreId}>
                             <td>{genre.genreName}</td>
-                            <td>{formatNumber(genre.songCount)}</td>
+                            <td className="text-right">{formatNumber(genre.songCount)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-        </div>
-      </div>
-      </div>
+                </div>
+              </div>
+            </div>
           )}
         </>
       )}

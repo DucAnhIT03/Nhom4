@@ -27,6 +27,25 @@ export class SongController {
     return this.songService.getNewReleases(parsedLimit);
   }
 
+  @ApiOperation({ summary: "Tìm kiếm bài hát theo tên" })
+  @Get("search")
+  search(@Query("q") query?: string, @Query("limit") limit?: string) {
+    try {
+      // Decode query parameter để xử lý đúng tiếng Việt có dấu
+      const decodedQuery = query ? decodeURIComponent(query) : "";
+      console.log(`[SongController] Search request - original query: "${query}", decoded: "${decodedQuery}", limit: ${limit}`);
+      
+      const parsedLimit = limit ? Number(limit) : undefined;
+      const searchQuery = decodedQuery || "";
+      
+      console.log(`[SongController] Calling searchByTitle with: "${searchQuery}"`);
+      return this.songService.searchByTitle(searchQuery, parsedLimit);
+    } catch (error) {
+      console.error(`[SongController] Error in search:`, error);
+      throw error;
+    }
+  }
+
   @ApiOperation({ summary: "Lấy chi tiết một bài hát theo ID" })
   @Get(":id")
   findOne(@Param("id", ParseIntPipe) id: number) {

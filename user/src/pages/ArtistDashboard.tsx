@@ -628,11 +628,12 @@ const ArtistDashboard = () => {
         if (songForm.duration) {
             payload.duration = songForm.duration;
         }
-        if (songForm.lyrics) {
-            payload.lyrics = songForm.lyrics;
+        // Luôn gửi lyrics và description, kể cả khi rỗng
+        if (songForm.lyrics !== undefined) {
+            payload.lyrics = songForm.lyrics || null;
         }
-        if (songForm.description) {
-            payload.description = songForm.description;
+        if (songForm.description !== undefined) {
+            payload.description = songForm.description || null;
         }
 
         if (editingSong) {

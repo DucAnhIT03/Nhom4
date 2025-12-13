@@ -181,8 +181,8 @@ export class DashboardService {
     dto.blockedUsers = usersByStatus[UserStatus.BLOCKED] || 0;
     dto.verifyUsers = usersByStatus[UserStatus.VERIFY] || 0;
     dto.freeUsers = usersByPlan[SubscriptionPlanType.FREE] || 0;
-    dto.premiumUsers = usersByPlan[SubscriptionPlanType.PRENIUM] || 0;
-    dto.artistUsers = usersByPlan[SubscriptionPlanType.AIRTIST] || 0;
+    dto.premiumUsers = usersByPlan[SubscriptionPlanType.PREMIUM] || 0;
+    dto.artistUsers = usersByPlan[SubscriptionPlanType.ARTIST] || 0;
 
     return dto;
   }

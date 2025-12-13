@@ -24,7 +24,10 @@ const AlbumList = lazy(() => import("./pages/Album.tsx"));
 const AlbumDetail = lazy(() => import("./pages/AlbumDetail.tsx"));
 
 // 4. Song Detail Page
-const SongDetail = lazy(() => import("./pages/SongDetail.tsx")); 
+const SongDetail = lazy(() => import("./pages/SongDetail.tsx"));
+
+// 5. Search Results Page
+const SearchResults = lazy(() => import("./pages/SearchResults.tsx")); 
 
 // 4. User Personal Pages (Cá nhân)
 const Favourites = lazy(() => import("./pages/Favourites.tsx"));
@@ -41,6 +44,7 @@ const ArtistDashboard = lazy(() => import("./pages/ArtistDashboard.tsx"));
 const Upgrade = lazy(() => import("./pages/Upgrade.tsx"));
 const Payment = lazy(() => import("./pages/Payment.tsx"));
 const PaymentCallback = lazy(() => import("./pages/PaymentCallback.tsx"));
+const PaymentHistory = lazy(() => import("./pages/PaymentHistory.tsx"));
 
 
 // --- ROUTER CONFIGURATION ---
@@ -90,6 +94,12 @@ const router = createBrowserRouter([
         element: <SongDetail />,
       },
 
+      // --- Search Route ---
+      {
+        path: "search",
+        element: <SearchResults />,
+      },
+
       // --- Personal Routes ---
       {
         path: "favorite",
@@ -131,6 +141,10 @@ const router = createBrowserRouter([
       {
         path: "payment/callback",
         element: <PaymentCallback />,
+      },
+      {
+        path: "payment-history",
+        element: <PaymentHistory />,
       },
 
       // === REDIRECT ROUTES (Xử lý các route không tồn tại) ===

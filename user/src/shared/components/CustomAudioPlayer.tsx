@@ -15,6 +15,21 @@ interface CustomAudioPlayerProps {
   className?: string;
   songType?: 'FREE' | 'PREMIUM';
   songArtistId?: number | null;
+  // Thông tin bài hát để set vào MusicContext
+  songId?: number;
+  songTitle?: string;
+  songArtist?: string;
+  songImage?: string;
+  // Danh sách tất cả bài hát để set queue (tùy chọn)
+  allSongs?: Array<{
+    id: number;
+    title: string;
+    artist: string;
+    fileUrl?: string;
+    coverImage?: string;
+    type?: 'FREE' | 'PREMIUM';
+    artistId?: number | null;
+  }>;
 }
 
 const formatTime = (time: number) => {
@@ -24,13 +39,34 @@ const formatTime = (time: number) => {
   return `${m}:${s < 10 ? "0" : ""}${s}`;
 };
 
-const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId }: CustomAudioPlayerProps) => {
+const CustomAudioPlayer = ({ 
+  src, 
+  onPlay, 
+  className = "", 
+  songType, 
+  songArtistId,
+  songId,
+  songTitle,
+  songArtist,
+  songImage,
+  allSongs
+}: CustomAudioPlayerProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { stopAllAudio, registerAudio, unregisterAudio, currentlyPlayingSong } = useMusic();
+  const { 
+    stopAllAudio, 
+    registerAudio, 
+    unregisterAudio, 
+    currentlyPlayingSong,
+    setCurrentlyPlayingSong,
+    setQueue,
+    setCurrentIndex,
+    queue,
+    playNext,
+    repeatMode
+  } = useMusic();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [repeatMode, setRepeatMode] = useState<"off" | "one">("off");
 
   // Đăng ký audio element và dừng khi có bài mới được phát từ MusicPlayerBar
   useEffect(() => {
@@ -89,11 +125,28 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleEnded = () => {
-      if (repeatMode === "one") {
-        audio.currentTime = 0;
-        audio.play().catch(console.error);
+      setIsPlaying(false);
+      setCurrentTime(0);
+      
+      // Nếu có queue và có bài tiếp theo, tự động chuyển bài
+      if (queue.length > 0) {
+        // Kiểm tra repeatMode từ context
+        if (repeatMode === 'one') {
+          // Lặp lại bài hiện tại
+          audio.currentTime = 0;
+          audio.play().catch(console.error);
+        } else {
+          // Tự động chuyển sang bài tiếp theo
+          setTimeout(() => {
+            playNext();
+          }, 100);
+        }
       } else {
-        setIsPlaying(false);
+        // Không có queue, chỉ dừng lại hoặc lặp lại bài hiện tại
+        if (repeatMode === "one") {
+          audio.currentTime = 0;
+          audio.play().catch(console.error);
+        }
       }
     };
 
@@ -110,7 +163,7 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [repeatMode]);
+  }, [queue, playNext, repeatMode]);
 
   const handlePlayPause = async () => {
     const audio = audioRef.current;
@@ -153,6 +206,46 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
           otherAudio.currentTime = 0;
         }
       });
+      
+      // Nếu có đủ thông tin bài hát, set vào MusicContext để hiển thị thanh player ở cuối trang
+      if (songId && songTitle && src) {
+        const musicSong = {
+          id: songId,
+          title: songTitle,
+          artist: songArtist || "Unknown Artist",
+          image: songImage || './slide/Song1.jpg',
+          audioUrl: src,
+          type: songType,
+          artistId: songArtistId,
+        };
+        
+        // Set bài hát đang phát
+        setCurrentlyPlayingSong(musicSong);
+        
+        // Set queue: nếu có allSongs thì dùng allSongs, nếu không thì chỉ bài hát hiện tại
+        if (allSongs && allSongs.length > 0) {
+          const queue = allSongs
+            .filter(s => s.fileUrl) // Chỉ lấy bài hát có fileUrl
+            .map(s => ({
+              id: s.id,
+              title: s.title,
+              artist: s.artist || "Unknown Artist",
+              image: s.coverImage || songImage || './slide/Song1.jpg',
+              audioUrl: s.fileUrl || '',
+              type: s.type,
+              artistId: s.artistId,
+            }));
+          
+          // Tìm index của bài hát hiện tại trong queue
+          const currentIndex = queue.findIndex(s => s.id === songId || s.audioUrl === src);
+          setQueue(queue);
+          setCurrentIndex(currentIndex >= 0 ? currentIndex : 0);
+        } else {
+          // Chỉ có bài hát hiện tại
+          setQueue([musicSong]);
+          setCurrentIndex(0);
+        }
+      }
       
       audio.play();
       if (onPlay) onPlay();
@@ -234,10 +327,12 @@ const CustomAudioPlayer = ({ src, onPlay, className = "", songType, songArtistId
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            setRepeatMode(repeatMode === "off" ? "one" : "off");
+            // Repeat mode được quản lý bởi MusicContext, không cần local state
+            // Button này chỉ để hiển thị, logic repeat được xử lý trong handleEnded
           }}
           className={`hover:text-gray-300 transition ${repeatMode === "one" ? "text-[#3BC8E7]" : ""}`}
           title={repeatMode === "one" ? "Repeat one (on)" : "Repeat off"}
+          disabled
         >
           <IoRepeatOutline className="text-lg" />
         </button>

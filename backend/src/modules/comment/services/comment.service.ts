@@ -5,6 +5,8 @@ import { Comment } from "../../../shared/schemas/comment.schema";
 import { User } from "../../../shared/schemas/user.schema";
 import { Song } from "../../../shared/schemas/song.schema";
 import { Artist } from "../../../shared/schemas/artist.schema";
+import { Role, RoleName } from "../../../shared/schemas/role.schema";
+import { UserRole } from "../../../shared/schemas/user-role.schema";
 import { CreateCommentDto } from "../dtos/request/create-comment.dto";
 import { UpdateCommentDto } from "../dtos/request/update-comment.dto";
 import { QueryCommentDto } from "../dtos/request/query-comment.dto";
@@ -20,6 +22,10 @@ export class CommentService {
     private readonly songRepository: Repository<Song>,
     @InjectRepository(Artist)
     private readonly artistRepository: Repository<Artist>,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
+    @InjectRepository(UserRole)
+    private readonly userRoleRepository: Repository<UserRole>,
   ) {}
 
   async findBySong(
@@ -56,6 +62,20 @@ export class CommentService {
         const repliesWithUser = await Promise.all(
           replies.map(async (reply) => {
             const replyUser = await this.userRepository.findOne({ where: { id: reply.userId } });
+            
+            // Kiểm tra xem user có phải là artist không
+            let isArtist = false;
+            if (replyUser) {
+              const userRoles = await this.userRoleRepository.find({ where: { userId: replyUser.id } });
+              const roles = await Promise.all(
+                userRoles.map(async (ur) => {
+                  const role = await this.roleRepository.findOne({ where: { id: ur.roleId } });
+                  return role?.roleName;
+                })
+              );
+              isArtist = roles.includes(RoleName.ARTIST);
+            }
+            
             return {
               ...reply,
               user: replyUser ? {
@@ -64,10 +84,24 @@ export class CommentService {
                 lastName: replyUser.lastName,
                 email: replyUser.email,
                 profileImage: replyUser.profileImage,
+                isArtist,
               } : undefined,
             };
           })
         );
+
+        // Kiểm tra xem user có phải là artist không
+        let isArtist = false;
+        if (user) {
+          const userRoles = await this.userRoleRepository.find({ where: { userId: user.id } });
+          const roles = await Promise.all(
+            userRoles.map(async (ur) => {
+              const role = await this.roleRepository.findOne({ where: { id: ur.roleId } });
+              return role?.roleName;
+            })
+          );
+          isArtist = roles.includes(RoleName.ARTIST);
+        }
 
         return {
           ...comment,
@@ -77,6 +111,7 @@ export class CommentService {
             lastName: user.lastName,
             email: user.email,
             profileImage: user.profileImage,
+            isArtist,
           } : undefined,
           replies: repliesWithUser,
         };
@@ -100,6 +135,20 @@ export class CommentService {
     
     // Load user info
     const user = await this.userRepository.findOne({ where: { id: saved.userId } });
+    
+    // Kiểm tra xem user có phải là artist không
+    let isArtist = false;
+    if (user) {
+      const userRoles = await this.userRoleRepository.find({ where: { userId: user.id } });
+      const roles = await Promise.all(
+        userRoles.map(async (ur) => {
+          const role = await this.roleRepository.findOne({ where: { id: ur.roleId } });
+          return role?.roleName;
+        })
+      );
+      isArtist = roles.includes(RoleName.ARTIST);
+    }
+    
     return {
       ...saved,
       user: user ? {
@@ -108,6 +157,7 @@ export class CommentService {
         lastName: user.lastName,
         email: user.email,
         profileImage: user.profileImage,
+        isArtist,
       } : undefined,
     } as Comment;
   }
@@ -149,6 +199,19 @@ export class CommentService {
         const user = await this.userRepository.findOne({ where: { id: comment.userId } });
         const song = await this.songRepository.findOne({ where: { id: comment.songId } });
         
+        // Kiểm tra xem user có phải là artist không
+        let isArtist = false;
+        if (user) {
+          const userRoles = await this.userRoleRepository.find({ where: { userId: user.id } });
+          const roles = await Promise.all(
+            userRoles.map(async (ur) => {
+              const role = await this.roleRepository.findOne({ where: { id: ur.roleId } });
+              return role?.roleName;
+            })
+          );
+          isArtist = roles.includes(RoleName.ARTIST);
+        }
+        
         return {
           ...comment,
           user: user ? {
@@ -157,6 +220,7 @@ export class CommentService {
             lastName: user.lastName,
             email: user.email,
             profileImage: user.profileImage,
+            isArtist,
           } : undefined,
           song: song ? {
             id: song.id,
@@ -192,6 +256,20 @@ export class CommentService {
     const commentsWithUser = await Promise.all(
       comments.map(async (comment) => {
         const user = await this.userRepository.findOne({ where: { id: comment.userId } });
+        
+        // Kiểm tra xem user có phải là artist không
+        let isArtist = false;
+        if (user) {
+          const userRoles = await this.userRoleRepository.find({ where: { userId: user.id } });
+          const roles = await Promise.all(
+            userRoles.map(async (ur) => {
+              const role = await this.roleRepository.findOne({ where: { id: ur.roleId } });
+              return role?.roleName;
+            })
+          );
+          isArtist = roles.includes(RoleName.ARTIST);
+        }
+        
         return {
           ...comment,
           user: user ? {
@@ -199,6 +277,7 @@ export class CommentService {
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
+            isArtist,
           } : undefined,
         };
       })

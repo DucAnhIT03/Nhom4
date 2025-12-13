@@ -248,7 +248,12 @@ const CommentManagementTab: React.FC<CommentManagementTabProps> = () => {
                                 {getUserName(comment).charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <div className="font-semibold text-white">{getUserName(comment)}</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-white">{getUserName(comment)}</span>
+                                  {comment.user?.isArtist && (
+                                    <span className="text-xs text-[#3BC8E7] font-medium">• Nghệ sĩ</span>
+                                  )}
+                                </div>
                                 <div className="text-xs text-gray-400 flex items-center gap-1">
                                   <Clock size={12} />
                                   {formatDate(comment.createdAt)}
@@ -278,6 +283,9 @@ const CommentManagementTab: React.FC<CommentManagementTabProps> = () => {
                                           </div>
                                           <div className="text-xs">
                                             <span className="font-semibold text-white">{getUserName(reply)}</span>
+                                            {reply.user?.isArtist && (
+                                              <span className="text-[#3BC8E7] font-medium ml-1">• Nghệ sĩ</span>
+                                            )}
                                             <span className="text-gray-400 ml-2">{formatDate(reply.createdAt)}</span>
                                           </div>
                                         </div>
