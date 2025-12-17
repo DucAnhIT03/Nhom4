@@ -8,7 +8,7 @@ const Layout = () => {
   return (
     <>
       <Outlet />
-      <MusicPlayerBar song={currentlyPlayingSong} />
+      {currentlyPlayingSong && <MusicPlayerBar song={currentlyPlayingSong} />}
     </>
   );
 };

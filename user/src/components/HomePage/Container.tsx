@@ -30,6 +30,12 @@ const Container = () => {
     songTitle: '',
   });
 
+  // Slider state
+  const [recentlyIndex, setRecentlyIndex] = useState<number>(0);
+  const [featuredArtistsIndex, setFeaturedArtistsIndex] = useState<number>(0);
+  const [featuredAlbumsIndex, setFeaturedAlbumsIndex] = useState<number>(0);
+  const ITEMS_PER_ROW = 6;
+
   useEffect(() => {
     const songID = localStorage.getItem("userId");
 
@@ -77,8 +83,8 @@ const Container = () => {
     // API Featured Albums (MỚI)
     getAlbums()
       .then((albums) => {
-        // Lấy 6 album đầu tiên để hiển thị
-        setFeaturedAlbums(albums.slice(0, 6));
+        // Lưu toàn bộ để có thể trượt nhiều trang
+        setFeaturedAlbums(albums);
       })
       .catch((err) => console.log("Lỗi fetch albums:", err));
 
@@ -455,6 +461,38 @@ const Container = () => {
     );
   };
 
+  const maxRecentlyIndex = Math.max(0, songs.length - ITEMS_PER_ROW);
+  const maxFeaturedArtistsIndex = Math.max(0, featuredArtists.length - ITEMS_PER_ROW);
+  const maxFeaturedAlbumsIndex = Math.max(0, featuredAlbums.length - ITEMS_PER_ROW);
+
+  const visibleRecently = songs.slice(recentlyIndex, recentlyIndex + ITEMS_PER_ROW);
+  const visibleFeaturedArtists = featuredArtists.slice(featuredArtistsIndex, featuredArtistsIndex + ITEMS_PER_ROW);
+  const visibleFeaturedAlbums = featuredAlbums.slice(featuredAlbumsIndex, featuredAlbumsIndex + ITEMS_PER_ROW);
+
+  const handleRecentlyPrev = () => {
+    setRecentlyIndex((prev) => Math.max(0, prev - ITEMS_PER_ROW));
+  };
+
+  const handleRecentlyNext = () => {
+    setRecentlyIndex((prev) => Math.min(maxRecentlyIndex, prev + ITEMS_PER_ROW));
+  };
+
+  const handleFeaturedArtistsPrev = () => {
+    setFeaturedArtistsIndex((prev) => Math.max(0, prev - ITEMS_PER_ROW));
+  };
+
+  const handleFeaturedArtistsNext = () => {
+    setFeaturedArtistsIndex((prev) => Math.min(maxFeaturedArtistsIndex, prev + ITEMS_PER_ROW));
+  };
+
+  const handleFeaturedAlbumsPrev = () => {
+    setFeaturedAlbumsIndex((prev) => Math.max(0, prev - ITEMS_PER_ROW));
+  };
+
+  const handleFeaturedAlbumsNext = () => {
+    setFeaturedAlbumsIndex((prev) => Math.min(maxFeaturedAlbumsIndex, prev + ITEMS_PER_ROW));
+  };
+
   return (
     <>
       <div className="mt-[43px] mb-[100px]">
@@ -466,9 +504,15 @@ const Container = () => {
         </div>
 
         <div className="flex gap-[30px] mt-[32px] ml-[120px]">
-          <FaChevronLeft className="text-white cursor-pointer" />
+          <button
+            className={`text-white ${recentlyIndex === 0 ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"} transition`}
+            onClick={handleRecentlyPrev}
+            disabled={recentlyIndex === 0}
+          >
+            <FaChevronLeft />
+          </button>
 
-          {songs.map((s) => (
+          {visibleRecently.map((s) => (
             <div
               key={s.id}
               className="text-white w-[175px] h-[256px] cursor-pointer relative group"
@@ -501,7 +545,13 @@ const Container = () => {
             </div>
           ))}
 
-          <FaChevronRight className="text-white cursor-pointer" />
+          <button
+            className={`text-white ${recentlyIndex >= maxRecentlyIndex ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"} transition`}
+            onClick={handleRecentlyNext}
+            disabled={recentlyIndex >= maxRecentlyIndex}
+          >
+            <FaChevronRight />
+          </button>
         </div>
 
         {/* === WEEKLY TOP 15 === */}
@@ -539,11 +589,15 @@ const Container = () => {
           </div>
 
           <div className="flex gap-[30px] mt-[32px] ml-[120px]">
-            <button className="text-white">
+            <button
+              className={`text-white ${featuredArtistsIndex === 0 ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"} transition`}
+              onClick={handleFeaturedArtistsPrev}
+              disabled={featuredArtistsIndex === 0}
+            >
               <FaChevronLeft />
             </button>
             {featuredArtists.length > 0 ? (
-              featuredArtists.map((artist) => {
+              visibleFeaturedArtists.map((artist) => {
                 return (
                   <div 
                     key={artist.id} 
@@ -595,7 +649,11 @@ const Container = () => {
                 </div>
               </>
             )}
-            <button className="text-white">
+            <button
+              className={`text-white ${featuredArtistsIndex >= maxFeaturedArtistsIndex ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"} transition`}
+              onClick={handleFeaturedArtistsNext}
+              disabled={featuredArtistsIndex >= maxFeaturedArtistsIndex}
+            >
               <FaChevronRight />
             </button>
           </div>
@@ -741,13 +799,17 @@ const Container = () => {
           </div>
           
           <div className="flex gap-[30px] mt-[32px] ml-[120px]">
-            <button className="text-white">
+            <button
+              className={`text-white ${featuredAlbumsIndex === 0 ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"} transition`}
+              onClick={handleFeaturedAlbumsPrev}
+              disabled={featuredAlbumsIndex === 0}
+            >
               <FaChevronLeft />
             </button>
 
             {/* Map dữ liệu Featured Albums */}
             {featuredAlbums.length > 0 ? (
-              featuredAlbums.map((album) => (
+              visibleFeaturedAlbums.map((album) => (
                 <div 
                   key={album.id} 
                   className="text-white w-[175px] h-[217px] cursor-pointer hover:opacity-90 transition-opacity"
@@ -777,7 +839,11 @@ const Container = () => {
               <p className="text-gray-400 ml-4">Loading albums...</p>
             )}
 
-            <button className="text-white">
+            <button
+              className={`text-white ${featuredAlbumsIndex >= maxFeaturedAlbumsIndex ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"} transition`}
+              onClick={handleFeaturedAlbumsNext}
+              disabled={featuredAlbumsIndex >= maxFeaturedAlbumsIndex}
+            >
               <FaChevronRight />
             </button>
           </div>

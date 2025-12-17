@@ -10,6 +10,8 @@ const Container = () => {
   const { t } = useLanguage();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recentlyIndex, setRecentlyIndex] = useState<number>(0);
+  const ITEMS_PER_ROW = 6;
 
   useEffect(() => {
     const loadArtists = async () => {
@@ -28,7 +30,7 @@ const Container = () => {
   }, []);
 
   // Chia artists thành các nhóm
-  const recentlyPlayed = artists.slice(0, 6); // 6 artists đầu cho Recently Played
+  const recentlyPlayed = artists; // Dùng toàn bộ để có thể trượt
   const featuredArtists = artists.slice(6); // Các artists còn lại cho Featured Artists
   
   // Chia featured artists thành các hàng, mỗi hàng 6 items
@@ -36,6 +38,17 @@ const Container = () => {
   for (let i = 0; i < featuredArtists.length; i += 6) {
     featuredRows.push(featuredArtists.slice(i, i + 6));
   }
+
+  const maxRecentlyIndex = Math.max(0, recentlyPlayed.length - ITEMS_PER_ROW);
+  const visibleRecently = recentlyPlayed.slice(recentlyIndex, recentlyIndex + ITEMS_PER_ROW);
+
+  const handleRecentlyPrev = () => {
+    setRecentlyIndex((prev) => Math.max(0, prev - ITEMS_PER_ROW));
+  };
+
+  const handleRecentlyNext = () => {
+    setRecentlyIndex((prev) => Math.min(maxRecentlyIndex, prev + ITEMS_PER_ROW));
+  };
 
   // Hàm render artist card
   const renderArtistCard = (artist: Artist) => {
@@ -85,17 +98,25 @@ const Container = () => {
       </div>
 
       <div className="flex gap-[30px] mt-[32px] ml-[120px]">
-        <button className="text-white hover:text-[#3BC8E7] transition">
+        <button
+          className={`text-white ${recentlyIndex === 0 ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"} transition`}
+          onClick={handleRecentlyPrev}
+          disabled={recentlyIndex === 0}
+        >
           <FaChevronLeft />
         </button>
 
-        {recentlyPlayed.length > 0 ? (
-          recentlyPlayed.map((artist) => renderArtistCard(artist))
+        {visibleRecently.length > 0 ? (
+          visibleRecently.map((artist) => renderArtistCard(artist))
         ) : (
           <div className="text-gray-400 text-sm">{t('artists.noArtists')}</div>
         )}
 
-        <button className="text-white hover:text-[#3BC8E7] transition">
+        <button
+          className={`text-white ${recentlyIndex >= maxRecentlyIndex ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"} transition`}
+          onClick={handleRecentlyNext}
+          disabled={recentlyIndex >= maxRecentlyIndex}
+        >
           <FaChevronRight />
         </button>
       </div>

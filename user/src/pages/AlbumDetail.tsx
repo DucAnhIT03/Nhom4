@@ -30,6 +30,7 @@ interface Song {
   fileUrl?: string;
   type?: 'FREE' | 'PREMIUM';
   artistId?: number;
+  coverImage?: string;
 }
 
 interface AlbumDetail {
@@ -87,6 +88,7 @@ const AlbumDetail = () => {
       fileUrl: song.fileUrl,
       type: song.type,
       artistId: song.artistId,
+      coverImage: (song as any).coverImage,
     };
   };
 
@@ -519,13 +521,13 @@ const AlbumDetail = () => {
                                     songId={song.id}
                                     songTitle={song.title}
                                     songArtist={song.artist}
-                                    songImage={album.img}
+                                    songImage={song.coverImage || album.img}
                                     allSongs={album.songs.map(s => ({
                                         id: s.id,
                                         title: s.title,
                                         artist: s.artist,
                                         fileUrl: s.fileUrl,
-                                        coverImage: album.img,
+                                        coverImage: s.coverImage || album.img,
                                         type: s.type,
                                         artistId: s.artistId,
                                     }))}

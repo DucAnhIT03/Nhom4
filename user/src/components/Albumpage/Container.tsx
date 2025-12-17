@@ -22,6 +22,12 @@ const Container = () => {
   const [top15Albums, setTop15Albums] = useState<AlbumCard[]>([]);
   const [loadingAlbums, setLoadingAlbums] = useState<boolean>(true);
 
+  // State cho vị trí hiện tại của slider
+  const [featuredIndex, setFeaturedIndex] = useState<number>(0);
+  const [trendingIndex, setTrendingIndex] = useState<number>(0);
+
+  const ITEMS_PER_ROW = 6;
+
   // Hàm map dữ liệu từ API sang format form tĩnh
   const mapAlbumToCard = (album: Album): AlbumCard => {
     // Đảm bảo title luôn có giá trị
@@ -65,7 +71,7 @@ const Container = () => {
         ]);
 
         // Map dữ liệu sang format form tĩnh
-        const featuredCards = allAlbums.slice(0, 6).map(mapAlbumToCard);
+        const featuredCards = allAlbums.map(mapAlbumToCard);
         const trendingCards = trending.map(mapAlbumToCard);
         const top15Cards = top15.map(mapAlbumToCard);
 
@@ -87,22 +93,52 @@ const Container = () => {
     navigate(`/album/${id}`);
   };
 
+  const handleFeaturedPrev = () => {
+    setFeaturedIndex((prev) => Math.max(0, prev - ITEMS_PER_ROW));
+  };
+
+  const handleFeaturedNext = () => {
+    setFeaturedIndex((prev) => {
+      const maxStart = Math.max(0, featuredAlbums.length - ITEMS_PER_ROW);
+      return Math.min(maxStart, prev + ITEMS_PER_ROW);
+    });
+  };
+
+  const handleTrendingPrev = () => {
+    setTrendingIndex((prev) => Math.max(0, prev - ITEMS_PER_ROW));
+  };
+
+  const handleTrendingNext = () => {
+    setTrendingIndex((prev) => {
+      const maxStart = Math.max(0, trendingAlbums.length - ITEMS_PER_ROW);
+      return Math.min(maxStart, prev + ITEMS_PER_ROW);
+    });
+  };
+
+  const visibleFeatured = featuredAlbums.slice(featuredIndex, featuredIndex + ITEMS_PER_ROW);
+  const visibleTrending = trendingAlbums.slice(trendingIndex, trendingIndex + ITEMS_PER_ROW);
+
   return (
     <div className="mt-[43px]">
       
       {/* ---------------- FEATURED ALBUMS ---------------- */}
       <div className="flex justify-between mt-[-511px]">
         <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">Featured Albums</span>
-        <span className="mr-[165px] text-white text-[15px] cursor-pointer hover:text-[#3BC8E7]">View more</span>
       </div>
 
       <div className="flex gap-[30px] mt-[32px] ml-[120px]">
-        <button className="text-white hover:text-[#3BC8E7] transition"><FaChevronLeft /></button>
+        <button
+          className={`text-white transition ${featuredIndex === 0 ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"}`}
+          onClick={handleFeaturedPrev}
+          disabled={featuredIndex === 0}
+        >
+          <FaChevronLeft />
+        </button>
 
         {loadingAlbums ? (
           <div className="text-white w-full text-center">Loading Featured...</div>
         ) : (
-          featuredAlbums.map((item) => (
+          visibleFeatured.map((item) => (
             <div
               key={item.id}
               onClick={() => handleAlbumClick(item.id)}
@@ -122,25 +158,36 @@ const Container = () => {
           ))
         )}
 
-        <button className="text-white hover:text-[#3BC8E7] transition"><FaChevronRight /></button>
+        <button
+          className={`text-white transition ${featuredIndex >= Math.max(0, featuredAlbums.length - ITEMS_PER_ROW) ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"}`}
+          onClick={handleFeaturedNext}
+          disabled={featuredIndex >= Math.max(0, featuredAlbums.length - ITEMS_PER_ROW)}
+        >
+          <FaChevronRight />
+        </button>
       </div>
 
       {/* ---------------- TRENDING ALBUMS (PHẦN BẠN CẦN GHÉP) ---------------- */}
       <div className="mt-[64px]">
         <div className="flex justify-between h-[26px]">
           <span className="ml-[160px] text-[#3BC8E7] text-[18px] font-semibold">Trending Albums</span>
-          <span className="mr-[165px] text-white text-[15px] cursor-pointer hover:text-[#3BC8E7]">View more</span>
         </div>
 
         <div className="flex gap-[30px] mt-[32px] ml-[120px]">
-          <button className="text-white hover:text-[#3BC8E7] transition"><FaChevronLeft /></button>
+          <button
+            className={`text-white transition ${trendingIndex === 0 ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"}`}
+            onClick={handleTrendingPrev}
+            disabled={trendingIndex === 0}
+          >
+            <FaChevronLeft />
+          </button>
 
           {loadingAlbums ? (
              <div className="text-white w-full text-center">Loading Trending...</div>
           ) : trendingAlbums.length === 0 ? (
              <div className="text-gray-400 w-full text-center">No trending albums found.</div>
           ) : (
-            trendingAlbums.map((item) => (
+            visibleTrending.map((item) => (
               <div
                 key={item.id}
                 onClick={() => handleAlbumClick(item.id)}
@@ -161,7 +208,13 @@ const Container = () => {
             ))
           )}
 
-          <button className="text-white hover:text-[#3BC8E7] transition"><FaChevronRight /></button>
+          <button
+            className={`text-white transition ${trendingIndex >= Math.max(0, trendingAlbums.length - ITEMS_PER_ROW) ? "opacity-50 cursor-not-allowed" : "hover:text-[#3BC8E7]"}`}
+            onClick={handleTrendingNext}
+            disabled={trendingIndex >= Math.max(0, trendingAlbums.length - ITEMS_PER_ROW)}
+          >
+            <FaChevronRight />
+          </button>
         </div>
       </div>
 

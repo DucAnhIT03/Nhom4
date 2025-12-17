@@ -23,6 +23,7 @@ import { RolesGuard } from "../../../common/guards/roles.guard";
 import { Roles } from "../../../common/decorators/roles.decorator";
 import { CurrentUser } from "../../../common/decorators/current-user.decorator";
 import { RoleName } from "../../../shared/schemas/role.schema";
+import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 
 @ApiTags("Quản lý người dùng")
 @Controller("users")
@@ -75,11 +76,23 @@ export class UserController {
   }
 
   @ApiOperation({ summary: "Đổi mật khẩu người dùng" })
+  // Ghi đè @Roles ở mức class: cho phép ADMIN, USER, ARTIST tự đổi mật khẩu
+  @Roles(RoleName.ADMIN, RoleName.USER, RoleName.ARTIST)
   @Put(":id/change-password")
   async changePassword(
     @Param("id", ParseIntPipe) id: number,
     @Body() changePasswordDto: ChangePasswordDto,
+    @CurrentUser() currentUser: { id: number; roles?: RoleName[] } | null,
   ) {
+    // Chỉ cho phép chính chủ hoặc admin đổi mật khẩu
+    if (!currentUser) {
+      throw new UnauthorizedException("User not authenticated");
+    }
+    const isAdmin = currentUser.roles?.includes(RoleName.ADMIN);
+    if (!isAdmin && currentUser.id !== id) {
+      throw new ForbiddenException("Bạn không có quyền đổi mật khẩu tài khoản này");
+    }
+
     return this.userService.changePassword(id, changePasswordDto);
   }
 

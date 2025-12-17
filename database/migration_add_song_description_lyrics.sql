@@ -75,3 +75,7 @@ DEALLOCATE PREPARE alterIfNotExists;
 
 SELECT 'Migration completed successfully!' AS message;
 
+
+
+
+

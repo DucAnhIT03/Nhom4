@@ -9,7 +9,7 @@
     "logout": "Đăng xuất",
     "languages": "Ngôn ngữ",
     "adminPage": "Trang Admin",
-    "viewMore": "Xem thêm",
+    "viewMore": "",
     "play": "Phát",
     "pause": "Tạm dừng",
     "next": "Tiếp theo",
@@ -119,7 +119,7 @@
   },
   "downloads": {
     "title": "Tải xuống",
-    "viewMore": "Xem thêm",
+    "viewMore": "",
     "recentlyDownloaded": "Đã tải gần đây",
     "albumsByArtists": "Albums By Artists",
     "featuredAlbums": "Featured Albums",
@@ -158,7 +158,7 @@
   "genres": {
     "title": "Thể loại",
     "topGenres": "Top Genres",
-    "viewMore": "Xem thêm"
+    "viewMore": ""
   },
   "banner": {
     "listenNow": "Nghe ngay",

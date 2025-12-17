@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -62,15 +64,26 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         }
       );
 
-      setMessage("✅ Đổi mật khẩu thành công!");
-      setTimeout(() => {
-        onClose();
-        setFormData({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-      }, 1000);
+      setMessage("✅ Đổi mật khẩu thành công! Bạn sẽ được đăng xuất để đăng nhập lại.");
+
+      // Đăng xuất user ngay sau khi đổi mật khẩu thành công
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("avatar");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("email");
+
+      // Reset form & đóng modal trước khi điều hướng
+      onClose();
+      setFormData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      // Điều hướng về trang đăng nhập
+      navigate("/login");
     } catch (err: any) {
       setMessage(
         err.response?.data?.message || "❌ Có lỗi xảy ra! Vui lòng thử lại."

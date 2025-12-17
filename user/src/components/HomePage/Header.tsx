@@ -5,8 +5,8 @@ import UserMenuDropdown from "../UserMenu/UserMenuDropdown";
 import LanguageDropdown from "../Language/LanguageDropdown";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { searchSongs } from "../../services/song.service";
-import type { Song } from "../../services/song.service";
+import { searchSongs, getWeeklyTopTracks } from "../../services/song.service";
+import type { Song, TrendingSong } from "../../services/song.service";
 
 const Header: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,8 +18,10 @@ const Header: React.FC = () => {
   const [searchResults, setSearchResults] = useState<Song[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const [trendingSongs, setTrendingSongs] = useState<TrendingSong[]>([]);
+  const [isLoadingTrending, setIsLoadingTrending] = useState<boolean>(false);
 
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -136,6 +138,22 @@ const Header: React.FC = () => {
       loadRoleFromAPI();
     };
     window.addEventListener("storage", handleStorageChange);
+
+    // Load trending songs cho Header
+    const fetchTrendingSongs = async () => {
+      try {
+        setIsLoadingTrending(true);
+        const data = await getWeeklyTopTracks(3);
+        setTrendingSongs(data);
+      } catch (error) {
+        console.error("Error fetching trending songs for header:", error);
+        setTrendingSongs([]);
+      } finally {
+        setIsLoadingTrending(false);
+      }
+    };
+
+    fetchTrendingSongs();
     
     return () => {
       clearInterval(intervalId);
@@ -322,7 +340,16 @@ const Header: React.FC = () => {
             )}
           </div>
           <span className="text-[#3BC8E7] ml-[35px] text-[15px]">{t('common.trendingSongs')} :</span>
-          <span className="text-white ml-1 text-[15px]">Dream your moments, Until I Met You, Gim</span>
+          <span className="text-white ml-1 text-[15px]">
+            {isLoadingTrending
+              ? t('common.loading')
+              : trendingSongs.length > 0
+                ? trendingSongs
+                    .map((item) => item.song?.title)
+                    .filter(Boolean)
+                    .join(", ")
+                : t('common.noSongs')}
+          </span>
           <button
             onClick={() => navigate("/upgrade")}
             className="ml-[35px] bg-gradient-to-r from-[#3BC8E7] to-[#25C3E7] text-white px-4 py-1.5 rounded-lg text-[14px] font-semibold hover:from-[#2ba8c7] hover:to-[#1fa3c2] transition-all shadow-lg relative group"

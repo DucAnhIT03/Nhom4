@@ -9,7 +9,7 @@
     "logout": "Logout",
     "languages": "Languages",
     "adminPage": "Admin Page",
-    "viewMore": "View more",
+    "viewMore": "",
     "play": "Play",
     "pause": "Pause",
     "next": "Next",
@@ -119,7 +119,7 @@
   },
   "downloads": {
     "title": "Downloads",
-    "viewMore": "View more",
+    "viewMore": "",
     "recentlyDownloaded": "Recently Downloaded",
     "albumsByArtists": "Albums By Artists",
     "featuredAlbums": "Featured Albums",
@@ -158,7 +158,7 @@
   "genres": {
     "title": "Genres",
     "topGenres": "Top Genres",
-    "viewMore": "View more"
+    "viewMore": ""
   },
   "banner": {
     "listenNow": "Listen Now",
